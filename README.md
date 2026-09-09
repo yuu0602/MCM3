@@ -28,8 +28,9 @@ python pipeline/run_all.py --source raw --step all --threads 16
 ```
 
 Raw FASTQs used by this workflow are stored beside this directory in
-`bulkRNAseq_data/` and `CUT&RUN_data/`. Only libraries entering RNA-seq
-quantification or the final CUT&RUN analysis are retained there.
+`bulkRNAseq_data/` and `CUT&RUN_data/`. CUT&RUN files are organized under
+`20191012/`, `20200923/`, and `20200929/`; archived cross-knockdown and
+undetermined reads are excluded from analysis by the generated sample manifest.
 
 Use `--dry-run` to print the stages without running them.
 

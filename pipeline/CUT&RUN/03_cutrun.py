@@ -222,8 +222,12 @@ def main() -> None:
         if not chrom_sizes.is_file():
             raise FileNotFoundError(f"Missing mm10 chromosome sizes: {chrom_sizes}")
 
+    selected = manifest.loc[
+        (manifest["batch"].astype(str) == "2020")
+        | manifest["selected_factor_library"].astype(str).str.lower().eq("true")
+    ].copy()
     rows: list[dict[str, object]] = []
-    for row in manifest.itertuples(index=False):
+    for row in selected.itertuples(index=False):
         library = str(row.library_id); r1 = Path(str(row.r1)); r2 = Path(str(row.r2))
         mouse_raw = CUTRUN_ROOT / "01_bowtie2" / "mouse" / f"{library}.bam"
         yeast_raw = CUTRUN_ROOT / "01_bowtie2" / "yeast" / f"{library}.bam"
