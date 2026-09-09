@@ -27,6 +27,10 @@ alignment, filtering, track generation, and peak calling:
 python pipeline/run_all.py --source raw --step all --threads 16
 ```
 
+Raw FASTQs used by this workflow are stored beside this directory in
+`bulkRNAseq_data/` and `CUT&RUN_data/`. Only libraries entering RNA-seq
+quantification or the final CUT&RUN analysis are retained there.
+
 Use `--dry-run` to print the stages without running them.
 
 ## Analysis Summary

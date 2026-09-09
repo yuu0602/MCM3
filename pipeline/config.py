@@ -20,14 +20,14 @@ CUTRUN_ROOT = RUN_ROOT / "cutrun_work"
 REGULATORY_ROOT = RUN_ROOT / "regulatory_work"
 
 RAW_RNASETS = {
-    "20161213": PROJECT_ROOT / "20161213_Mcm3KD_RNAseq",
-    "201709": PROJECT_ROOT / "201709_Mcm3KD_RNAseq",
-    "20180718": PROJECT_ROOT / "20180718_NonoPspc1KD_RNAseq",
+    "20161213": PROJECT_ROOT / "bulkRNAseq_data" / "20161213_Mcm3KD_RNAseq",
+    "201709": PROJECT_ROOT / "bulkRNAseq_data" / "201709_Mcm3KD_RNAseq",
+    "20180718": PROJECT_ROOT / "bulkRNAseq_data" / "20180718_NonoPspc1KD_RNAseq",
 }
-RAW_CUTRUN_2019 = PROJECT_ROOT / "20191012_CUT&RUN_Mcm3_Nono_Pspc1_KD"
+RAW_CUTRUN_2019 = PROJECT_ROOT / "CUT&RUN_data" / "20191012_CUT&RUN_Mcm3_Nono_Pspc1_KD"
 RAW_CUTRUN_2020 = {
-    "20200923": PROJECT_ROOT / "20200923_Mcm3_project",
-    "20200929": PROJECT_ROOT / "20200929_CUTRUN",
+    "20200923": PROJECT_ROOT / "CUT&RUN_data" / "20200923_Mcm3_project",
+    "20200929": PROJECT_ROOT / "CUT&RUN_data" / "20200929_CUTRUN",
 }
 
 # Accepted intermediate products used by the fast, publication-figure path.

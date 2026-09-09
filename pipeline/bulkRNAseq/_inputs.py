@@ -178,7 +178,7 @@ def build_cutrun_manifest() -> pd.DataFrame:
             "yeast_mass_pg": pd.NA,
         })
 
-    expected_2019 = 24
+    expected_2019 = 12
     if len(rows) != expected_2019:
         raise RuntimeError(f"Expected {expected_2019} 2019 factor FASTQ pairs; found {len(rows)}")
 
