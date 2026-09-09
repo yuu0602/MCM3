@@ -1,0 +1,37 @@
+name: mcm3-final
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - r-base=4.5
+  - salmon=1.10.3
+  - bowtie2=2.5.4
+  - samtools=1.21
+  - picard=3.4.0
+  - bedtools=2.31.1
+  - macs3=3.0.4
+  - ucsc-bedgraphtobigwig
+  - python-pandas
+  - python-numpy
+  - matplotlib-base
+  - matplotlib-venn
+  - deeptools=3.5.6
+  - pybigwig
+  - r-data.table
+  - r-gridextra
+  - r-png
+  - r-readr
+  - r-dplyr
+  - r-tibble
+  - r-ggplot2
+  - r-pheatmap
+  - bioconductor-tximport
+  - bioconductor-edger
+  - bioconductor-limma
+  - bioconductor-annotationdbi
+  - bioconductor-org.mm.eg.db
+  - bioconductor-rtracklayer
+  - bioconductor-genomicranges
+  - bioconductor-genomeinfodb
+  - bioconductor-s4vectors
