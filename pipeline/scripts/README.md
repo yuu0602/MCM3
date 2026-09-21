@@ -10,13 +10,3 @@
 | 04 | `CUT&RUN/04_call_peaks_and_define_binding.py` | Peaks and promoter-bound genes |
 | 05 | `CUT&RUN/05_render_figures.py` | CUT&RUN figures |
 | 06 | `regulatory_target/06_define_regulatory_targets.py` | Regulatory targets and figures |
-
-Run all stages:
-
-```bash
-python run_pipeline.py --source accepted --step all --threads 16
-```
-
-Use `--source raw` for a complete FASTQ rebuild. Figure helpers are kept in each
-assay's `figures_rendering/` directory and are called by the numbered parent
-script.
