@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Verify that the final workflow emitted every registered publication figure."""
 
+#Before you run this script, please replace directory placeholders with your own directory
+
 from __future__ import annotations
 
 import csv
