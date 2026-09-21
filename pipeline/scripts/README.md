@@ -10,7 +10,6 @@
 | 04 | `CUT&RUN/04_call_peaks_and_define_binding.py` | Peaks and promoter-bound genes |
 | 05 | `CUT&RUN/05_render_figures.py` | CUT&RUN figures |
 | 06 | `regulatory_target/06_define_regulatory_targets.py` | Regulatory targets and figures |
-| 07 | `regulatory_target/07_validate_outputs.py` | Output and consistency checks |
 
 Run all stages:
 

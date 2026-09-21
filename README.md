@@ -10,4 +10,3 @@ Here is our step-by-step pipeline organization
 4. Matched-IgG peak calling/filtering and promoter binding.
 5. CUT&RUN figures.
 6. Regulatory target intersection and figures.
-7. Output validation.

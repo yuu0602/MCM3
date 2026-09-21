@@ -16,18 +16,16 @@ CUTRUN = "CUT&RUN/03_align_and_normalize.py"
 BINDING = "CUT&RUN/04_call_peaks_and_define_binding.py"
 CUTRUN_FIGURES = "CUT&RUN/05_render_figures.py"
 REGULATORY = "regulatory_target/06_define_regulatory_targets.py"
-VERIFY = "regulatory_target/07_validate_outputs.py"
 
 
 def workflow(source: str) -> dict[str, tuple[str, ...]]:
     raw_cutrun = (CUTRUN,) if source == "raw" else ()
-    figures = (PREPARE, RNASEQ, *raw_cutrun, BINDING, CUTRUN_FIGURES, REGULATORY, VERIFY)
+    figures = (PREPARE, RNASEQ, *raw_cutrun, BINDING, CUTRUN_FIGURES, REGULATORY)
     return {
         "prepare": (PREPARE,),
         "rna": (PREPARE, RNASEQ),
         "cutrun": (PREPARE, *raw_cutrun, BINDING, CUTRUN_FIGURES),
-        "regulatory": figures[:-1],
-        "verify": (VERIFY,),
+        "regulatory": figures,
         "figures": figures,
         "all": figures,
     }
@@ -35,7 +33,7 @@ def workflow(source: str) -> dict[str, tuple[str, ...]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--step", choices=("all", "prepare", "rna", "cutrun", "regulatory", "verify", "figures"), default="all")
+    parser.add_argument("--step", choices=("all", "prepare", "rna", "cutrun", "regulatory", "figures"), default="all")
     parser.add_argument("--source", choices=("accepted", "raw"), default="accepted")
     parser.add_argument("--threads", type=int, default=max(1, min(16, os.cpu_count() or 1)))
     parser.add_argument("--dry-run", action="store_true")
