@@ -1,5 +1,5 @@
 # MCM3 Project Analysis Pipeline
-## Analysis Summary
+## Analysis Conditions
 
 - RNA-seq reads are quantified with Salmon and tested with limma-voom. DEGs
   require **BH-adjusted p-value <= 0.05** and **absolute log2 fold change >= 0.28**.
