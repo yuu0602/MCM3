@@ -4,8 +4,8 @@ This repository contains the two condition-specific publication pipelines for th
 
 | Directory | Promoter peak overlap | Factor/IgG support |
 | --- | --- | --- |
-| `strict_2p0fold_250bp/` | >=250 bp | >=2.0 in both biological replicates |
-| `relaxed_1p5fold_200bp/` | >=200 bp | >=1.5 in both biological replicates |
+| `strict_mode/` | >=250 bp | >=2.0 in both biological replicates |
+| `relaxed_mode/` | >=200 bp | >=1.5 in both biological replicates |
 
 Each condition directory contains its own `pipeline/`, `README.md`, `environment.yml`, and `tests/test_runtime_hygiene.py`. The two pipelines use the same seven-stage layout:
 
