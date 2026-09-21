@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Call candidate peaks, apply final filters, and define promoter binding."""
 
+#Before you run this script, please replace directory placeholders with your own directory
+
 from __future__ import annotations
 
 import argparse
