@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Quantify RNA-seq reads and generate differential-expression outputs."""
+"""Quantify bulk-RNAseq reads and generate differential expression outputs."""
+
+#Before you run this script, please replace directory placeholders with your own directory
 
 from __future__ import annotations
 
