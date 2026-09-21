@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Intersect promoter-bound genes with DEGs and render regulatory figures."""
 
+#Before you run this script, please replace directory placeholders with your own directory
+
 from __future__ import annotations
 
 import argparse
