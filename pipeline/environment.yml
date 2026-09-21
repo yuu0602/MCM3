@@ -3,36 +3,38 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  # Replace every VERSION placeholder with a manuscript-verified version before solving.
-  - python=3.12
-  - r-base=4.5
+  - python=3.11
+  - r-base=4.4
   - salmon=1.10.3
   - bowtie2=2.5.4
   - samtools=1.21
   - picard=3.4.0
   - bedtools=2.31.1
   - macs3=3.0.4
-  - ucsc-bedgraphtobigwig=VERSION
-  - pandas=VERSION
-  - numpy=VERSION
-  - matplotlib-base=VERSION
-  - matplotlib-venn=VERSION
+  - ucsc-bedgraphtobigwig=482
   - deeptools=3.5.6
-  - pybigwig=VERSION
-  - r-data.table=VERSION
-  - r-gridextra=VERSION
-  - r-png=VERSION
-  - r-readr=VERSION
-  - r-dplyr=VERSION
-  - r-tibble=VERSION
-  - r-ggplot2=VERSION
-  - r-pheatmap=VERSION
-  - bioconductor-tximport=VERSION
-  - bioconductor-edger=VERSION
-  - bioconductor-limma=VERSION
-  - bioconductor-annotationdbi=VERSION
-  - bioconductor-org.mm.eg.db=VERSION
-  - bioconductor-rtracklayer=VERSION
-  - bioconductor-genomicranges=VERSION
-  - bioconductor-genomeinfodb=VERSION
-  - bioconductor-s4vectors=VERSION
+  - pybigwig
+  - pandas
+  - numpy
+  - matplotlib-base
+  - openjdk=17
+  - r-data.table
+  - r-gridextra
+  - r-png
+  - r-readr
+  - r-dplyr
+  - r-tibble
+  - r-ggplot2
+  - r-pheatmap
+  - bioconductor-tximport
+  - bioconductor-edger
+  - bioconductor-limma
+  - bioconductor-annotationdbi
+  - bioconductor-org.mm.eg.db
+  - bioconductor-rtracklayer
+  - bioconductor-genomicranges
+  - bioconductor-genomeinfodb
+  - bioconductor-s4vectors
+  - pip
+  - pip:
+      - matplotlib-venn==1.1.2
