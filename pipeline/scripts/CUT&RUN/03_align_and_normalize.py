@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Align the two 2020 CUT&RUN experiments and build normalized tracks."""
+"""Align the CUT&RUN experiments and build normalized tracks."""
+
+#Before you run this script, please replace directory placeholders with your own directory
 
 from __future__ import annotations
 
