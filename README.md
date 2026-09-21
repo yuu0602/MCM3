@@ -1,6 +1,6 @@
 # MCM3 Project Pipelines
 
-This repository contains the two condition-specific publication pipelines for the MCM3-PSPC1-NONO project. The older root-level pipeline has been removed.
+This repository contains the two condition-specific publication pipelines for the MCM3-PSPC1-NONO project.
 
 | Directory | Promoter peak overlap | Factor/IgG support |
 | --- | --- | --- |
@@ -18,5 +18,3 @@ Each condition directory contains its own `pipeline/`, `README.md`, `environment
 7. Output validation.
 
 Raw FASTQs, alignments, bigWigs, peak outputs, and publication figures are intentionally not tracked in GitHub. To rebuild from FASTQ files, place `bulkRNAseq_data/` and `CUT&RUN_data/` beside the two condition folders and follow the relevant condition README.
-
-The reference transcript FASTA is downloaded by the pipeline during a raw rebuild and is also not tracked.
