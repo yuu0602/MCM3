@@ -1,0 +1,17 @@
+# Experimental inputs and generated analysis outputs
+bulkRNAseq_data/
+CUT&RUN_data/
+
+strict_2p0fold_250bp/reference/
+strict_2p0fold_250bp/deg_work/
+strict_2p0fold_250bp/cutrun_work/
+strict_2p0fold_250bp/regulatory_work/
+relaxed_1p5fold_200bp/reference/
+relaxed_1p5fold_200bp/deg_work/
+relaxed_1p5fold_200bp/cutrun_work/
+relaxed_1p5fold_200bp/regulatory_work/
+
+__pycache__/
+*.py[cod]
+._*
+.DS_Store
