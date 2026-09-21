@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Prepare references, manifests, and accepted local inputs."""
 
+#Before you run this script, please replace directory placeholders with your own directory
+
 from __future__ import annotations
 
 import argparse
