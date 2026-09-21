@@ -7,7 +7,7 @@ from pathlib import Path
 
 RUN_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = RUN_ROOT.parent
-PIPELINE_ROOT = RUN_ROOT / "pipeline"
+PIPELINE_ROOT = RUN_ROOT / "scripts"
 
 REFERENCE_DIR = RUN_ROOT / "reference"
 RNA_ROOT = RUN_ROOT / "deg_work"

@@ -15,10 +15,10 @@ RSCRIPT = os.environ.get("TEST_RSCRIPT") or shutil.which("Rscript")
 
 
 def r_sources():
-    for path in (ROOT / "pipeline").rglob("*.R"):
+    for path in (ROOT / "scripts").rglob("*.R"):
         if not path.name.startswith("._"):
             yield str(path.relative_to(ROOT)), path.read_text()
-    for path in (ROOT / "pipeline").rglob("*.py"):
+    for path in (ROOT / "scripts").rglob("*.py"):
         if path.name.startswith("._"):
             continue
         for node in ast.walk(ast.parse(path.read_text())):
@@ -78,7 +78,7 @@ writeLines("resource fork fixture", "._Rplots.pdf")
                         self.assertFalse((Path(directory) / "._Rplots.pdf").exists())
 
     def test_stage06_resolves_r_against_child_path(self):
-        path = ROOT / "pipeline/regulatory_target/06_define_regulatory_targets.py"
+        path = ROOT / "scripts/regulatory_target/06_define_regulatory_targets.py"
         spec = importlib.util.spec_from_file_location("stage06_runtime_test", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
