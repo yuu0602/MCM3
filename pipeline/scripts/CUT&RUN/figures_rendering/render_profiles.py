@@ -18,7 +18,7 @@ CUTRUN = RUN / "cutrun_work"
 DATA = CUTRUN / "data" / "figure_inputs"
 VISUALS = CUTRUN / "visuals"
 PROMOTER = DATA / "promoter_gene_venn"
-TAG = "p1e4_q1e2_fe3_min2of2"
+TAG = "q5e2_fe3_min2of2"
 FACTORS = ("MCM3", "NONO", "PSPC1")
 COLORS = {"MCM3": "#A80F14", "NONO": "#F39C12", "PSPC1": "#1F4AA8", "IgG": "#6B7280"}
 GENE_BED = CUTRUN / "data" / "GeneBodies_M25.bed6"
@@ -70,12 +70,12 @@ def render_promoter_venn(sets: dict[str, set[str]]) -> None:
     module.PLOT_TITLE = "CUT&RUN promoter-gene overlap"
     module.plot_venn(
         sets,
-        VISUALS / f"FigX_promoter_gene_overlap_venn__{TAG}.png",
+        VISUALS / "Venn_PromoterGenes.png",
         show_numbers=True,
     )
     module.plot_venn(
         sets,
-        VISUALS / f"FigX_promoter_gene_overlap_venn__{TAG}_no_numbers.png",
+        VISUALS / "Venn_PromoterGenes_noNumbers.png",
         show_numbers=False,
     )
 
@@ -167,10 +167,10 @@ def render_rpkm_profiles(sets: dict[str, set[str]]) -> None:
         magnitude = 10.0 ** math.floor(math.log10(target))
         module.Y_MAX = next(value * magnitude for value in (1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10) if value * magnitude >= target)
         labels = [
-            f"MCM3-PSPC1-NONO co-binding\\n(n={counts['111_MCM3_NONO_PSPC1']:,})",
-            f"MCM3-NONO co-binding\\n(n={counts['110_MCM3_NONO']:,})",
-            f"MCM3-PSPC1 co-binding\\n(n={counts['101_MCM3_PSPC1']:,})",
-            f"MCM3-specific binding\\n(n={counts['100_only_MCM3']:,})",
+            f"MCM3-PSPC1-NONO co-binding (n={counts['111_MCM3_NONO_PSPC1']:,})",
+            f"MCM3-NONO co-binding (n={counts['110_MCM3_NONO']:,})",
+            f"MCM3-PSPC1 co-binding (n={counts['101_MCM3_PSPC1']:,})",
+            f"MCM3-specific binding (n={counts['100_only_MCM3']:,})",
         ]
         levels = ["MCM3-PSPC1-NONO co-binding", "MCM3-NONO co-binding", "MCM3-PSPC1 co-binding", "MCM3-specific binding"]
         r_script = r'''

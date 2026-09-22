@@ -19,7 +19,7 @@ if str(PIPELINE_ROOT) not in sys.path:
 from config import CUTRUN_ROOT, FACTORS, REFERENCE_DIR, RUN_ROOT
 
 
-TAG = "p1e4_q1e2_fe3_min2of2"
+TAG = "q5e2_fe3_min2of2"
 HELPERS = Path(__file__).resolve().parent / "figures_rendering"
 FIGURE_DATA = CUTRUN_ROOT / "data" / "figure_inputs"
 VISUALS = CUTRUN_ROOT / "visuals"
@@ -109,64 +109,32 @@ def configure_additional():
     return module
 
 
-def publish(mapping: dict[str, str]) -> None:
-    VISUALS.mkdir(parents=True, exist_ok=True)
-    for source_name, target_name in mapping.items():
-        source, target = VISUALS / source_name, VISUALS / target_name
-        if source == target:
-            if not target.is_file():
-                raise FileNotFoundError(target)
-            continue
-        if not source.is_file():
-            if target.is_file():
-                continue
-            raise FileNotFoundError(source)
-        target.unlink(missing_ok=True)
-        source.replace(target)
-
-
-OUTPUTS = {
-    "FigX_TSS_to_TES_metaprofile__NT_KD_UNION__minus3_to_plus3_TES2p8.png": "Metaprofile_PromoterGenes.png",
-    "FigS2e_peak_overlap_whole_genome.png": "Venn_Peaks.png",
-    "FigS2e_peak_overlap_whole_genome_no_numbers.png": "Venn_Peaks_noNumbers.png",
-    "MCM3_RPKM.png": "MCM3_RPKM.png",
-    "NONO_RPKM.png": "NONO_RPKM.png",
-    "PSPC1_RPKM.png": "PSPC1_RPKM.png",
-    "FigX_promoter_only_profile__region_101.png": "Profile_MCM3_PSPC1.png",
-    "FigX_promoter_only_profile__region_110.png": "Profile_MCM3_NONO.png",
-    "FigX_promoter_only_profile__region_111.png": "Profile_MCM3_NONO_PSPC1.png",
-    f"FigX_promoter_gene_overlap_venn__{TAG}.png": "Venn_PromoterGenes.png",
-    f"FigX_promoter_gene_overlap_venn__{TAG}_no_numbers.png": "Venn_PromoterGenes_noNumbers.png",
-    "FigX_peak_distribution_IgG.png": "Pie_IgG.png",
-    "FigX_peak_distribution_MCM3.png": "Pie_MCM3.png",
-    "FigX_peak_distribution_NONO.png": "Pie_NONO.png",
-    "FigX_peak_distribution_PSPC1.png": "Pie_PSPC1.png",
-    "FigX_peak_distribution_pies.png": "Pie_PeakDistribution.png",
-    "MCM3_Peak_profiles.png": "MCM3_Peak_profiles.png",
-    "MCM3_NONO_PSPC1_peak_profiles.png": "MCM3_NONO_PSPC1_peak_profiles.png",
-}
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--publish-only", action="store_true")
+    parser.add_argument("--rpkm-only", action="store_true")
     args = parser.parse_args()
     if args.dry_run:
         print("[DRY-RUN] Would render the registered CUT&RUN figures.")
         return
-    if not args.publish_only:
-        prepare_inputs()
-        required = [REFERENCE_DIR / "gencode.vM25.annotation.gtf", CUTRUN_ROOT / "data" / "GeneBodies_M25.bed6", IGG, *TRACKS.values()]
-        missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
-        if missing:
-            raise FileNotFoundError("Missing CUT&RUN figure inputs:\n" + "\n".join(missing))
-        configure_primary().main()
-        distribution = configure_distribution()
-        distribution.main()
-        counts = FIGURE_DATA / "peak_distribution" / "Pie_PeakDistribution_counts.tsv"
-        shutil.copy2(counts, CUTRUN_ROOT / "data" / "Pie_PeakDistribution_counts.tsv")
-        configure_additional().main()
-    publish(OUTPUTS)
+    prepare_inputs()
+    required = [REFERENCE_DIR / "gencode.vM25.annotation.gtf", CUTRUN_ROOT / "data" / "GeneBodies_M25.bed6", IGG, *TRACKS.values()]
+    missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
+    if missing:
+        raise FileNotFoundError("Missing CUT&RUN figure inputs:\n" + "\n".join(missing))
+    primary = configure_primary()
+    if args.rpkm_only:
+        primary.render_rpkm_profiles(primary.promoter_sets())
+        print(f"[DONE] CUT&RUN RPKM figures: {VISUALS}")
+        return
+    primary.main()
+    distribution = configure_distribution()
+    distribution.main()
+    counts = FIGURE_DATA / "peak_distribution" / "Pie_PeakDistribution_counts.tsv"
+    shutil.copy2(counts, CUTRUN_ROOT / "data" / "Pie_PeakDistribution_counts.tsv")
+    configure_additional().main()
+    peak_gene_module = load_module(HELPERS / "render_peak_associated_genes.py")
+    peak_gene_module.main()
     print(f"[DONE] CUT&RUN figures: {VISUALS}")
 
 

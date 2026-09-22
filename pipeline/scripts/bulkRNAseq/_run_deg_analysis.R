@@ -36,13 +36,9 @@ OUT_DATA <- file.path(ROOT, "data")
 OUT_VIS <- file.path(ROOT, "visuals")
 COMPAT_ROOT <- file.path(ROOT, "limma_outputs")
 COMPAT_DEG <- file.path(COMPAT_ROOT, "DEGs")
-COMPAT_VOLCANO <- file.path(COMPAT_ROOT, "volcanos")
-COMPAT_HEATMAP <- file.path(COMPAT_ROOT, "heatmaps")
 dir.create(OUT_DATA, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_VIS, recursive = TRUE, showWarnings = FALSE)
 dir.create(COMPAT_DEG, recursive = TRUE, showWarnings = FALSE)
-dir.create(COMPAT_VOLCANO, recursive = TRUE, showWarnings = FALSE)
-dir.create(COMPAT_HEATMAP, recursive = TRUE, showWarnings = FALSE)
 
 FDR_MAX <- 0.05
 LFC_MIN <- 0.28
@@ -118,8 +114,6 @@ plot_volcano <- function(tab, factor) {
           axis.title.y = element_text(face = "bold", colour = "black"),
           axis.text = element_text(colour = "black"), plot.margin = margin(8, 10, 8, 10))
   ggsave(file.path(OUT_VIS, paste0("Volcano_", factor, ".png")), p, width = 7.2, height = 5.6, dpi = 300, bg = "white")
-  ggsave(file.path(COMPAT_VOLCANO, paste0("Volcano_", factor, "_KD_vs_NT_paper.png")),
-         p, width = 7.2, height = 5.6, dpi = 300, bg = "white")
 }
 
 plot_heatmap <- function(logcpm, sig, subset_meta, factor) {
@@ -150,15 +144,6 @@ plot_heatmap <- function(logcpm, sig, subset_meta, factor) {
   png(file.path(OUT_VIS, paste0("Heatmap_", factor, ".png")), width = width_in, height = height_in, units = "in", res = 300, type = png_type)
   grid.newpage(); grid.draw(ph$gtable); dev.off()
   write_tsv(tibble(gene_id = rownames(z)), file.path(OUT_DATA, paste0("Heatmap_", factor, "_genes.tsv")))
-  legacy_name <- if (factor == "MCM3") {
-    paste0("Heatmap_MCM3_BIOREP_DEGcount", nrow(z), "_paper_NT20161213_sh1sh2.png")
-  } else {
-    paste0("Heatmap_", factor, "_BIOREP_DEGcount", nrow(z), "_paper_NT20180718.png")
-  }
-  png(file.path(COMPAT_HEATMAP, legacy_name), width = width_in, height = height_in, units = "in", res = 300, type = png_type)
-  grid.newpage(); grid.draw(ph$gtable); dev.off()
-  write_tsv(tibble(gene_id = rownames(z)),
-            file.path(COMPAT_HEATMAP, sub("\\.png$", "_genes.tsv", legacy_name)))
 }
 
 write_compatible_tables <- function(tab, factor) {

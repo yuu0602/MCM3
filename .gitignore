@@ -9,5 +9,7 @@ pipeline/regulatory_work/
 
 __pycache__/
 *.py[cod]
+.Rhistory
+.cache/
 ._*
 .DS_Store

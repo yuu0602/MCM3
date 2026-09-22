@@ -31,8 +31,8 @@ def tool(name: str, candidates: tuple[str, ...]) -> str:
     raise FileNotFoundError(f"Required executable not found: {name}")
 
 
-def render_venn(dry_run: bool) -> None:
-    command = [sys.executable, str(Path(__file__).with_name("_render_venn.py"))]
+def render_figures(dry_run: bool) -> None:
+    command = [sys.executable, str(Path(__file__).with_name("03_render_figures.py"))]
     if dry_run:
         command.append("--dry-run")
     print("[RUN]", " ".join(command))
@@ -49,7 +49,6 @@ def main() -> None:
     manifest_path = RNA_ROOT / "metadata" / "Samples.tsv"
     if not manifest_path.is_file():
         raise FileNotFoundError("Run 01_prepare_inputs.py before RNA-seq quantification")
-    rscript = tool("Rscript", ("Rscript",))
     quant_manifest = RNA_ROOT / "metadata" / "Salmon_quantifications.tsv"
     if not args.requantify:
         if not quant_manifest.is_file() and not args.dry_run:
@@ -57,11 +56,7 @@ def main() -> None:
                 "Missing packaged Salmon_quantifications.tsv. Run 01_prepare_inputs.py "
                 "or use --requantify for the raw-FASTQ path."
             )
-        command = [rscript, str(Path(__file__).with_name("_run_deg_analysis.R")), str(RNA_ROOT), str(REFERENCE_DIR)]
-        print("[RUN]", " ".join(command))
-        if not args.dry_run:
-            subprocess.run(command, check=True)
-        render_venn(args.dry_run)
+        render_figures(args.dry_run)
         return
 
     transcriptome = REFERENCE_DIR / GENCODE_TRANSCRIPTS_NAME
@@ -102,8 +97,7 @@ def main() -> None:
 
     if not args.dry_run:
         pd.DataFrame(rows).to_csv(quant_manifest, sep="\t", index=False)
-        subprocess.run([rscript, str(Path(__file__).with_name("_run_deg_analysis.R")), str(RNA_ROOT), str(REFERENCE_DIR)], check=True)
-    render_venn(args.dry_run)
+    render_figures(args.dry_run)
 
 
 if __name__ == "__main__":

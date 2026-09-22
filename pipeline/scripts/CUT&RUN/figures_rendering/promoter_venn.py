@@ -66,9 +66,10 @@ def plot_venn(sets: dict[str, set[str]], out_png: Path, show_numbers: bool) -> N
 
     axes.set_aspect("equal", adjustable="box")
     axes.set_axis_off()
-    figure.text(0.5, 0.95, PLOT_TITLE, ha="center", va="center", fontsize=15, fontweight="bold", color="#222222")
-    figure.text(0.10, 0.84, f"MCM3\n({len(a):,})", ha="left", va="center", fontsize=14, fontweight="bold")
-    figure.text(0.78, 0.77, f"NONO\n({len(b):,})", ha="left", va="center", fontsize=14, fontweight="bold")
-    figure.text(0.76, 0.16, f"PSPC1\n({len(c):,})", ha="left", va="center", fontsize=14, fontweight="bold")
+    if show_numbers:
+        figure.text(0.5, 0.95, PLOT_TITLE, ha="center", va="center", fontsize=15, fontweight="bold", color="#222222")
+        figure.text(0.10, 0.84, f"MCM3\n({len(a):,})", ha="left", va="center", fontsize=14, fontweight="bold")
+        figure.text(0.78, 0.77, f"NONO\n({len(b):,})", ha="left", va="center", fontsize=14, fontweight="bold")
+        figure.text(0.76, 0.16, f"PSPC1\n({len(c):,})", ha="left", va="center", fontsize=14, fontweight="bold")
     figure.savefig(out_png, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(figure)

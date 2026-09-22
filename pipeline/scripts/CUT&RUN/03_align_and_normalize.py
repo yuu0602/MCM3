@@ -103,13 +103,40 @@ def mark_and_filter(
     library: str,
     threads: int,
     dry_run: bool,
+    include_duplicates: bool,
 ) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if indexed_bam_exists(destination):
         return
+    if include_duplicates:
+        # Marking only changes the duplicate flag. This branch retains those reads,
+        # so filter the original coordinate-sorted alignment directly.
+        run(
+            [
+                samtools,
+                "view",
+                "-@",
+                str(threads),
+                "-b",
+                "-f",
+                "3",
+                "-F",
+                "2816",
+                "-q",
+                str(MAPQ_MIN),
+                "-o",
+                str(destination),
+                str(source),
+            ],
+            dry_run,
+        )
+        run([samtools, "index", "-@", str(threads), str(destination)], dry_run)
+        return
     read_groups = destination.with_name(f"{library}.rg.bam")
     marked = destination.with_name(f"{library}.markdup.bam")
     metrics = destination.with_name("markdup.metrics.txt")
+    # 3840 excludes secondary, QC-failed, duplicate-marked, and supplementary reads.
+    excluded_flags = "3840"
     run(
         [
             picard,
@@ -148,7 +175,7 @@ def mark_and_filter(
             "-f",
             "3",
             "-F",
-            "3840",
+            excluded_flags,
             "-q",
             str(MAPQ_MIN),
             "-o",
@@ -263,8 +290,8 @@ def transform_bigwigs(sources: list[Path], destination: Path, multiplier: float 
             reader.close()
 
 
-def make_mean_tracks(manifest: pd.DataFrame) -> None:
-    root = CUTRUN_ROOT / "03_bigwig"
+def make_mean_tracks(manifest: pd.DataFrame, cutrun_root: Path) -> None:
+    root = cutrun_root / "03_bigwig"
     base = root / "mean_intermediates"
     display = root / "IGV_representation"
     rows = []
@@ -297,10 +324,29 @@ def main() -> None:
         "--threads", type=int, default=max(1, min(16, os.cpu_count() or 1))
     )
     parser.add_argument("--from-raw", action="store_true")
+    parser.add_argument(
+        "--work-root",
+        type=Path,
+        default=CUTRUN_ROOT,
+        help="CUT&RUN output root; defaults to the primary analysis root.",
+    )
+    parser.add_argument(
+        "--reuse-alignments",
+        type=Path,
+        help="Reuse mouse and yeast coordinate-sorted BAMs from this 01_bowtie2 directory.",
+    )
+    parser.add_argument(
+        "--exclude-duplicates",
+        dest="include_duplicates",
+        action="store_false",
+        help="Exclude duplicate-marked reads after Picard marking.",
+    )
+    parser.set_defaults(include_duplicates=True)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     if not args.from_raw:
         raise SystemExit("Use run_pipeline.py --source raw to rebuild CUT&RUN intermediates")
+    cutrun_root = args.work_root.resolve()
     manifest = pd.read_csv(CUTRUN_ROOT / "metadata" / "Samples.tsv", sep="\t")
     if len(manifest) != 8 or set(manifest.factor) != {*FACTORS, "IgG"}:
         raise RuntimeError("The CUT&RUN manifest must contain two libraries for each factor and IgG")
@@ -326,37 +372,44 @@ def main() -> None:
     rows = []
     for sample in manifest.itertuples(index=False):
         library = str(sample.library_id)
-        mouse_raw = CUTRUN_ROOT / "01_bowtie2" / library / f"{library}.sorted.bam"
-        yeast_raw = CUTRUN_ROOT / "01_bowtie2" / "yeast" / library / f"{library}.sorted.bam"
-        mouse = CUTRUN_ROOT / "02_bam" / library / f"{library}.filt.sorted.bam"
-        yeast = CUTRUN_ROOT / "02_bam" / "yeast" / library / f"{library}.filt.sorted.bam"
-        align(
-            bowtie2,
-            samtools,
-            mouse_index,
-            Path(sample.r1),
-            Path(sample.r2),
-            mouse_raw,
-            args.threads,
-            False,
-            args.dry_run,
-        )
-        align(
-            bowtie2,
-            samtools,
-            yeast_index,
-            Path(sample.r1),
-            Path(sample.r2),
-            yeast_raw,
-            args.threads,
-            True,
-            args.dry_run,
+        alignment_root = args.reuse_alignments or (cutrun_root / "01_bowtie2")
+        mouse_raw = alignment_root / library / f"{library}.sorted.bam"
+        yeast_raw = alignment_root / "yeast" / library / f"{library}.sorted.bam"
+        mouse = cutrun_root / "02_bam" / library / f"{library}.filt.sorted.bam"
+        yeast = cutrun_root / "02_bam" / "yeast" / library / f"{library}.filt.sorted.bam"
+        if args.reuse_alignments:
+            if not indexed_bam_exists(mouse_raw) or not indexed_bam_exists(yeast_raw):
+                raise FileNotFoundError(f"Missing reusable alignment for {library}")
+        else:
+            align(
+                bowtie2,
+                samtools,
+                mouse_index,
+                Path(sample.r1),
+                Path(sample.r2),
+                mouse_raw,
+                args.threads,
+                False,
+                args.dry_run,
+            )
+            align(
+                bowtie2,
+                samtools,
+                yeast_index,
+                Path(sample.r1),
+                Path(sample.r2),
+                yeast_raw,
+                args.threads,
+                True,
+                args.dry_run,
+            )
+        mark_and_filter(
+            picard, samtools, mouse_raw, mouse, library, args.threads, args.dry_run,
+            args.include_duplicates,
         )
         mark_and_filter(
-            picard, samtools, mouse_raw, mouse, library, args.threads, args.dry_run
-        )
-        mark_and_filter(
-            picard, samtools, yeast_raw, yeast, library, args.threads, args.dry_run
+            picard, samtools, yeast_raw, yeast, library, args.threads, args.dry_run,
+            args.include_duplicates,
         )
         if args.dry_run:
             continue
@@ -367,7 +420,7 @@ def main() -> None:
             converter,
             mouse,
             chrom_sizes,
-            CUTRUN_ROOT / "03_bigwig" / library / f"{library}.bw",
+            cutrun_root / "03_bigwig" / library / f"{library}.bw",
             scale,
             False,
         )
@@ -377,11 +430,12 @@ def main() -> None:
                 "yeast_pairs": yeast_pairs,
                 "coverage_scale": scale,
                 "normalization": "mouse paired-fragment coverage per 10,000 retained yeast pairs",
+                "duplicate_policy": "included" if args.include_duplicates else "excluded",
             }
         )
     if not args.dry_run:
-        pd.DataFrame(rows).to_csv(CUTRUN_ROOT / "03_bigwig" / "YeastNormalization.tsv", sep="\t", index=False)
-        make_mean_tracks(manifest)
+        pd.DataFrame(rows).to_csv(cutrun_root / "03_bigwig" / "YeastNormalization.tsv", sep="\t", index=False)
+        make_mean_tracks(manifest, cutrun_root)
 
 
 if __name__ == "__main__":

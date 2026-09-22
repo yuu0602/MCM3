@@ -249,7 +249,11 @@ def plot_profile(code: str, profiles: dict[str, np.ndarray]) -> Path:
     for label in (*axis.get_xticklabels(), *axis.get_yticklabels()):
         label.set_fontweight("bold")
 
-    out_png = OUTDIR / f"FigX_promoter_only_profile__region_{code}.png"
+    out_png = OUTDIR / {
+        "111": "Profile_MCM3_NONO_PSPC1.png",
+        "110": "Profile_MCM3_NONO.png",
+        "101": "Profile_MCM3_PSPC1.png",
+    }[code]
     fig.savefig(out_png, dpi=DPI, facecolor="white")
     plt.close(fig)
     return out_png
