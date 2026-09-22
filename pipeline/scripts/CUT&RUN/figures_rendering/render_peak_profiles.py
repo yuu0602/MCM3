@@ -20,7 +20,7 @@ RUN = PROJECT.parents[2]
 CUTRUN = RUN / "cutrun_work"
 DATA = CUTRUN / "data" / "figure_inputs"
 VISUALS = CUTRUN / "visuals"
-TAG = "p1e4_q1e2_fe3_min2of2"
+TAG = "q5e2_fe3_min2of2"
 GTF = RUN / "reference" / "gencode.vM25.annotation.gtf"
 GENE_BED = CUTRUN / "data" / "GeneBodies_M25.bed6"
 FACTORS = ("MCM3", "NONO", "PSPC1")
@@ -76,10 +76,10 @@ def draw_reference_venn() -> None:
     venn = load_module(PROJECT / "peak_venn.py", "peak_venn")
     values = tuple(sets[factor] for factor in FACTORS)
     venn.plot_triple_venn(
-        values, FACTORS, VISUALS / "FigS2e_peak_overlap_whole_genome.png",
+        values, FACTORS, VISUALS / "Venn_Peaks.png",
     )
     venn.plot_triple_venn(
-        values, FACTORS, VISUALS / "FigS2e_peak_overlap_whole_genome_no_numbers.png",
+        values, FACTORS, VISUALS / "Venn_Peaks_noNumbers.png",
         show_numbers=False, show_totals=False,
     )
 
@@ -359,7 +359,7 @@ def render_promoter_gene_profile() -> None:
     for label in legend.get_texts():
         label.set_fontweight("bold")
     fig.subplots_adjust(left=.13, right=.76, bottom=.16, top=.79)
-    save(fig, "FigX_TSS_to_TES_metaprofile__NT_KD_UNION__minus3_to_plus3_TES2p8.png")
+    save(fig, "Metaprofile_PromoterGenes.png")
 
 
 def main() -> None:

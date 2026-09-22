@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Call candidate peaks, apply final filters, and define promoter binding."""
-
-#Before you run this script, please replace directory placeholders with your own directory
+"""Call direct-FDR peaks and define promoter binding."""
 
 from __future__ import annotations
 
@@ -23,10 +21,8 @@ if str(PIPELINE_ROOT) not in sys.path:
 from config import (
     CUTRUN_ROOT,
     FACTORS,
-    PEAK_CANDIDATE_P_MAX,
     PEAK_FE_MIN,
-    PEAK_P_MAX,
-    PEAK_Q_2020_MAX,
+    PEAK_Q_MAX,
     PROMOTER_BP,
     PROMOTER_OVERLAP_BP,
     RATIO_MIN,
@@ -75,8 +71,10 @@ def call_macs(
             "--keep-dup",
             "all",
             "--call-summits",
-            "-p",
-            f"{PEAK_CANDIDATE_P_MAX:g}",
+            "-q",
+            f"{PEAK_Q_MAX:g}",
+            "--fe-cutoff",
+            f"{PEAK_FE_MIN:g}",
             "-n",
             name,
             "--outdir",
@@ -113,15 +111,13 @@ def call_macs(
 
 
 def peak_passes(fields: list[str]) -> bool:
-    p_min = -math.log10(PEAK_P_MAX)
-    q_min = -math.log10(PEAK_Q_2020_MAX)
+    q_min = -math.log10(PEAK_Q_MAX)
     if len(fields) < 9:
         return False
     start, end = int(fields[1]), int(fields[2])
-    fold_enrichment, p_score, q_score = map(float, fields[6:9])
+    fold_enrichment, _p_score, q_score = map(float, fields[6:9])
     return (
         end > start
-        and p_score >= p_min
         and q_score >= q_min
         and fold_enrichment >= PEAK_FE_MIN
     )
@@ -131,11 +127,9 @@ def filter_peak_file(source: Path, destination: Path) -> Path:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(destination.name + ".tmp")
     table = pd.read_csv(source, sep="\t", header=None)
-    p_min = -math.log10(PEAK_P_MAX)
-    q_min = -math.log10(PEAK_Q_2020_MAX)
+    q_min = -math.log10(PEAK_Q_MAX)
     table = table[
-        (pd.to_numeric(table.iloc[:, 7], errors="coerce") >= p_min)
-        & (pd.to_numeric(table.iloc[:, 8], errors="coerce") >= q_min)
+        (pd.to_numeric(table.iloc[:, 8], errors="coerce") >= q_min)
         & (pd.to_numeric(table.iloc[:, 6], errors="coerce") >= PEAK_FE_MIN)
     ]
     if table.empty:
@@ -518,11 +512,11 @@ def install_promoters(
             ("batches", "20200929 replicate 1; 20200923 replicate 2"),
             (
                 "peak_call",
-                "pooled two-replicate BAMPE against pooled matched IgG; candidate p<=1e-3",
+                "pooled two-replicate BAMPE against pooled matched IgG; direct q<=0.05",
             ),
             (
                 "peak_thresholds",
-                "retained p<=1e-4; q<=0.01; fold enrichment>=3",
+                "MACS3 q<=0.05; fold enrichment>=3",
             ),
             ("promoter_window", "GENCODE M25 TSS +/-1,000 bp"),
             ("peak_promoter_overlap", ">=250 bp"),
@@ -594,8 +588,8 @@ def raw(manifest: pd.DataFrame) -> None:
     )
     promoters, bodies = gtf_tables(REFERENCE_DIR / "gencode.vM25.annotation.gtf")
     write_reference_beds(promoters, bodies)
-    peak_root = CUTRUN_ROOT / "04_peaks"
-    candidate_root = peak_root / "candidate_calls"
+    peak_root = CUTRUN_ROOT / "04_peaks" / "direct_q05"
+    candidate_root = peak_root / "calls"
     peak_sets = {}
     promoter_sets = {}
     support_tables = {}
@@ -643,10 +637,18 @@ def raw(manifest: pd.DataFrame) -> None:
 
 
 def main() -> None:
+    global CUTRUN_ROOT
     parser = argparse.ArgumentParser()
     parser.add_argument("--from-raw", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--work-root",
+        type=Path,
+        default=CUTRUN_ROOT,
+        help="CUT&RUN analysis root; defaults to the primary analysis root.",
+    )
     args = parser.parse_args()
+    CUTRUN_ROOT = args.work_root.resolve()
     if args.dry_run:
         print("[DRY-RUN] Would define 2020 matched-IgG peaks and 2-of-2 promoter binding.")
         return

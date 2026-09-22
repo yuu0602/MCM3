@@ -162,12 +162,12 @@ def annotate_and_plot(peak_beds: dict[str, Path], unit_label: str, combined: boo
         midpoint_bed = renderer.TMPDIR / f"{factor}.peaks_mid.bed"
         total = renderer.bed_to_peak_midpoints(peak_bed, midpoint_bed)
         counts = renderer.assign_categories(midpoint_bed, categories) if total else {name: 0 for name in renderer.CATEGORY_ORDER}
-        renderer.save_single(STAGE / f"FigX_peak_distribution_{factor}.png", factor, counts, total)
+        renderer.save_single(STAGE / f"Pie_{factor}.png", factor, counts, total)
         results[factor] = counts
         totals[factor] = total
         rows.extend({"factor": factor, "category": category, "n_peaks": int(value), "total_peaks": total} for category, value in counts.items())
     if combined:
-        renderer.save_three_panel(STAGE / "FigX_peak_distribution_pies.png", results, totals)
+        renderer.save_three_panel(STAGE / "Pie_PeakDistribution.png", results, totals)
     return pd.DataFrame(rows)
 
 
@@ -199,11 +199,11 @@ def main() -> None:
     factor_counts = annotate_and_plot(factor_beds, "peaks", combined=True)
     igg_counts = annotate_and_plot({"IgG": igg_bed}, "peaks", combined=False)
     move_visuals((
-        "FigX_peak_distribution_pies.png",
-        "FigX_peak_distribution_MCM3.png",
-        "FigX_peak_distribution_NONO.png",
-        "FigX_peak_distribution_PSPC1.png",
-        "FigX_peak_distribution_IgG.png",
+        "Pie_PeakDistribution.png",
+        "Pie_MCM3.png",
+        "Pie_NONO.png",
+        "Pie_PSPC1.png",
+        "Pie_IgG.png",
     ))
     summary = pd.concat((factor_counts, igg_counts), ignore_index=True)
     summary.to_csv(DATA / "peak_distribution" / "Pie_PeakDistribution_counts.tsv", sep="\t", index=False)

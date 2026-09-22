@@ -136,19 +136,20 @@ def main() -> None:
     ax.set_aspect("equal", adjustable="box")
     ax.set_axis_off()
 
-    fig.text(0.5, 0.96, args.title, ha="center", va="center", fontsize=17, fontweight="bold", color="#222222")
-    if args.subtitle:
-        fig.text(0.5, 0.915, args.subtitle, ha="center", va="center", fontsize=9.5,
-                 fontweight="bold", color="#333333")
+    if not args.hide_numbers:
+        fig.text(0.5, 0.96, args.title, ha="center", va="center", fontsize=17, fontweight="bold", color="#222222")
+        if args.subtitle:
+            fig.text(0.5, 0.915, args.subtitle, ha="center", va="center", fontsize=9.5,
+                     fontweight="bold", color="#333333")
 
-    # External labels placed like the Python 25e design (left / right / lower-right).
-    set_lab_fs = 14.5
-    fig.text(0.08, 0.85, f"{args.a_name}\n({args.a_total:,})", ha="left", va="center",
-             fontsize=set_lab_fs, fontweight="bold", color="#2A2A2A")
-    fig.text(0.76, 0.85, f"{args.b_name}\n({args.b_total:,})", ha="left", va="center",
-             fontsize=set_lab_fs, fontweight="bold", color="#2A2A2A")
-    fig.text(0.74, 0.14, f"{args.c_name}\n({args.c_total:,})", ha="left", va="center",
-             fontsize=set_lab_fs, fontweight="bold", color="#2A2A2A")
+        # External labels placed like the Python 25e design (left / right / lower-right).
+        set_lab_fs = 14.5
+        fig.text(0.08, 0.85, f"{args.a_name}\n({args.a_total:,})", ha="left", va="center",
+                 fontsize=set_lab_fs, fontweight="bold", color="#2A2A2A")
+        fig.text(0.76, 0.85, f"{args.b_name}\n({args.b_total:,})", ha="left", va="center",
+                 fontsize=set_lab_fs, fontweight="bold", color="#2A2A2A")
+        fig.text(0.74, 0.14, f"{args.c_name}\n({args.c_total:,})", ha="left", va="center",
+                 fontsize=set_lab_fs, fontweight="bold", color="#2A2A2A")
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

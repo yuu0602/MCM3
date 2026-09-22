@@ -135,12 +135,20 @@ binding_pie <- function(factor, all_targets, direct_targets, out, show_numbers =
     ggplot2::geom_text(ggplot2::aes(label = label), position = ggplot2::position_stack(vjust = 0.5), size = 4, fontface = "bold") +
     ggplot2::coord_polar(theta = "y") +
     ggplot2::scale_fill_manual(values = c("Targets w/ promoter binding" = "#BFD9F2", "Targets w/o promoter binding" = "#9AA3C7")) +
-    ggplot2::labs(
-      title = if (show_numbers) sprintf("%s targets (n=%s)", factor, format(length(all_targets), big.mark = ",")) else sprintf("%s targets", factor),
+    ggplot2::theme_void(base_size = 12)
+  if (show_numbers) {
+    p <- p + ggplot2::labs(
+      title = sprintf("%s targets (n=%s)", factor, format(length(all_targets), big.mark = ",")),
       subtitle = "Promoter binding from CUT&RUN (TSS +/- 1 kb)"
-    ) +
-    ggplot2::theme_void(base_size = 12) +
-    ggplot2::theme(legend.position = "bottom", legend.title = ggplot2::element_blank(), legend.text = ggplot2::element_text(size = 11), plot.title = ggplot2::element_text(size = 18, face = "bold", hjust = 0.5), plot.subtitle = ggplot2::element_text(size = 12, hjust = 0.5))
+    ) + ggplot2::theme(
+      legend.position = "bottom", legend.title = ggplot2::element_blank(),
+      legend.text = ggplot2::element_text(size = 11),
+      plot.title = ggplot2::element_text(size = 18, face = "bold", hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(size = 12, hjust = 0.5)
+    )
+  } else {
+    p <- p + ggplot2::theme(legend.position = "none", plot.margin = ggplot2::margin(8, 8, 8, 8))
+  }
   ggplot2::ggsave(out, p, width = 6.5, height = 5.5, dpi = 300, bg = "white")
 }
 
@@ -227,7 +235,7 @@ make_group_profile <- function(group_name, genes, tracks, gtf_genes) {
     ggplot2::labs(title = sprintf(GROUPS[[group_name]]$title, n_bed), x = "Relative distance (kb)", y = COVERAGE_AXIS_LABEL) +
     ggplot2::theme_classic(base_size = 15) +
     ggplot2::theme(plot.title = ggplot2::element_text(size = 17, face = "bold", hjust = 0.5), axis.line = ggplot2::element_line(linewidth = 1.0), panel.border = ggplot2::element_rect(color = "black", fill = NA, linewidth = 1.0), axis.ticks = ggplot2::element_line(linewidth = 1.0), axis.text = ggplot2::element_text(size = 14, face = "bold", color = "black"), axis.title = ggplot2::element_text(size = 16, face = "bold"), legend.position = "right", legend.text = ggplot2::element_text(size = 14, face = "bold"), plot.margin = ggplot2::margin(10, 12, 12, 12))
-  out_png <- file.path(REGTARGET_VISUAL_DIR, paste0("metaprofile_geneBody_", group_name, ".single.paper.png"))
+  out_png <- file.path(REGTARGET_VISUAL_DIR, paste0("Metaprofile_Group", group_name, ".png"))
   # Match the single-panel Profile_MCM3_NONO aspect ratio (7.4:5.6).
   ggplot2::ggsave(out_png, p, width = 10.5, height = 10.5 * 5.6 / 7.4, dpi = 300, bg = "white")
   for (path in c(out_png, profile, bed)) {
@@ -247,7 +255,7 @@ make_mcm3_target_profile <- function(gtf_genes) {
   prefix <- file.path(REGTARGET_DIR, "Metaprofile_MCM3_target")
   matrix <- paste0(prefix, ".matrix.gz")
   profile <- paste0(prefix, "_data.tsv")
-  raw_plot <- tempfile(pattern = "PanelC_metaprofile_", fileext = ".png")
+  raw_plot <- tempfile(pattern = "mcm3_target_metaprofile_", fileext = ".png")
   on.exit(unlink(raw_plot), add = TRUE)
   # This deepTools build has no computeMatrix --regionsLabel option. The two
   # region files retain their order and are relabelled explicitly below.
@@ -278,7 +286,7 @@ make_mcm3_target_profile <- function(gtf_genes) {
     ggplot2::labs(title = "MCM3 CUT&RUN across gene bodies (TSS\u2192TES; scaled)", x = "Relative distance (kb)", y = COVERAGE_AXIS_LABEL) +
     ggplot2::theme_classic(base_size = 16) +
     ggplot2::theme(plot.title = ggplot2::element_text(size = 21, face = "bold", hjust = 0.5, margin = ggplot2::margin(b = 10)), axis.line = ggplot2::element_line(linewidth = 1), panel.border = ggplot2::element_rect(color = "black", fill = NA, linewidth = 1.0), axis.ticks = ggplot2::element_line(linewidth = 1), axis.text = ggplot2::element_text(size = 15, face = "bold", color = "black"), axis.title = ggplot2::element_text(size = 18, face = "bold"), legend.position = "top", legend.direction = "horizontal", legend.text = ggplot2::element_text(size = 15, face = "bold"), legend.key.width = grid::unit(1.1, "cm"), plot.margin = ggplot2::margin(18, 18, 18, 24))
-  out_png <- file.path(REGTARGET_VISUAL_DIR, "PanelC_metaprofile_MCM3_targets_geneBody_TSS_TES_scaled_pub.png")
+  out_png <- file.path(REGTARGET_VISUAL_DIR, "Metaprofile_MCM3_target.png")
   ggplot2::ggsave(out_png, p, width = 14.6667, height = 14.6667 * 5.6 / 7.4, dpi = 300, bg = "white")
   target <- file.path(GROUP_VISUAL_DIR, basename(out_png))
   if (!identical(normalizePath(out_png, mustWork = FALSE), normalizePath(target, mustWork = FALSE))) file.copy(out_png, target, overwrite = TRUE)
@@ -306,16 +314,16 @@ for (name in names(GROUPS)) {
   counts <- table(factor(tab$class, levels = c("Up", "Down", "Mix")))
   summary_rows[[name]] <- data.frame(group = name, group_definition = GROUPS[[name]]$label, venn_region = GROUPS[[name]]$region, n_genes = nrow(tab), n_up = counts[["Up"]], n_down = counts[["Down"]], n_mix = counts[["Mix"]], stringsAsFactors = FALSE)
   plot <- pie_plot(sprintf("Group %s: %s\nn = %s", name, GROUPS[[name]]$label, nrow(tab)), tab)
-  out <- file.path(GROUP_VISUAL_DIR, paste0("group_", name, "_pie.png"))
+  out <- file.path(GROUP_VISUAL_DIR, paste0("Pie_Group", name, ".png"))
   ggplot2::ggsave(out, plot, width = 5.2, height = 5.2, dpi = 300, bg = "white")
   pie_paths <- c(pie_paths, out)
   plot_no_labels <- pie_plot(NULL, tab, show_numbers = FALSE, show_labels = FALSE)
-  ggplot2::ggsave(file.path(GROUP_VISUAL_DIR, paste0("group_", name, "_pie_no_labels.png")), plot_no_labels, width = 5.2, height = 5.2, dpi = 300, bg = "white")
+  ggplot2::ggsave(file.path(GROUP_VISUAL_DIR, paste0("Pie_Group", name, "_noLabels.png")), plot_no_labels, width = 5.2, height = 5.2, dpi = 300, bg = "white")
 }
 write.table(do.call(rbind, summary_rows), file.path(GROUP_DIR, "Pie_Groups_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(data.frame(group = names(GROUPS), group_definition = vapply(GROUPS, `[[`, character(1), "label"), venn_region = vapply(GROUPS, `[[`, character(1), "region"), n_genes = vapply(groups, length, integer(1))), file.path(GROUP_DIR, "Pie_Groups_definitions.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 
-grDevices::png(file.path(GROUP_VISUAL_DIR, "groups_A_B_C_D_pies.png"), width = 3150, height = 3300, res = 300, bg = "white")
+grDevices::png(file.path(GROUP_VISUAL_DIR, "Pie_Groups.png"), width = 3150, height = 3300, res = 300, bg = "white")
 grid::grid.newpage()
 grid::pushViewport(grid::viewport(layout = grid::grid.layout(3, 2, heights = grid::unit(c(0.6, 5.2, 5.2), "in"), widths = grid::unit(c(5.25, 5.25), "in"))))
 grid::grid.text("Regulatory-target overlap groups (Up / Down / Mix)", vp = grid::viewport(layout.pos.row = 1, layout.pos.col = 1:2), gp = grid::gpar(fontsize = 18, fontface = "bold"))
@@ -333,8 +341,8 @@ writeLines(c(input_parameters, "mix_color\t#F3D37A (yellow)"), file.path(GROUP_D
 
 for (factor in c("NONO", "PSPC1")) {
   all_targets <- union(union(class_sets[[factor]]$up, class_sets[[factor]]$down), class_sets[[factor]]$indirect)
-  binding_pie(factor, all_targets, direct_sets[[factor]], file.path(GROUP_VISUAL_DIR, paste0("pie_targets_promoter_binding_", factor, ".png")))
-  binding_pie(factor, all_targets, direct_sets[[factor]], file.path(GROUP_VISUAL_DIR, paste0("pie_targets_promoter_binding_", factor, "_no_numbers.png")), show_numbers = FALSE)
+  binding_pie(factor, all_targets, direct_sets[[factor]], file.path(GROUP_VISUAL_DIR, paste0("Pie_TargetBinding_", factor, ".png")))
+  binding_pie(factor, all_targets, direct_sets[[factor]], file.path(GROUP_VISUAL_DIR, paste0("Pie_TargetBinding_", factor, "_noNumbers.png")), show_numbers = FALSE)
 }
 
 gtf_genes <- read_gtf_genes(GTF)

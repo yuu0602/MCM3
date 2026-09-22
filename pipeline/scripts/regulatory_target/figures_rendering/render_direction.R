@@ -269,11 +269,11 @@ for (i in seq_along(FACTORS)) {
 shared <- Reduce(intersect, direct_sets)
 regions <- draw_venn(
   direct_sets,
-  file.path(VISUAL_DIR, "venn_regulatory_targets_MCM3_NONO_PSPC1.png")
+  file.path(VISUAL_DIR, "Venn_target.png")
 )
 draw_venn(
   direct_sets,
-  file.path(VISUAL_DIR, "venn_regulatory_targets_MCM3_NONO_PSPC1_no_numbers.png"),
+  file.path(VISUAL_DIR, "Venn_target_noNumbers.png"),
   hide_numbers = TRUE
 )
 write.table(do.call(rbind, summary_rows), file.path(OUTDIR, "promoter_vs_DEG_direction_summary.tsv"),
@@ -297,17 +297,21 @@ region_genes <- list(
   MCM3_NONO_PSPC1 = shared
 )
 write.table(do.call(rbind, lapply(names(region_genes), function(region) {
-  data.frame(region = region, gene = sort(region_genes[[region]]), stringsAsFactors = FALSE)
+  genes <- sort(region_genes[[region]])
+  if (!length(genes)) {
+    return(data.frame(region = character(), gene = character(), stringsAsFactors = FALSE))
+  }
+  data.frame(region = rep(region, length(genes)), gene = genes, stringsAsFactors = FALSE)
 })), file.path(OUTDIR, "Venn_target_genes.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 
 panel$stack_three_pngs(panel_pngs,
-  out_png = file.path(VISUAL_DIR, "Fig_promoter_vs_DEG_direction.png")
+  out_png = file.path(VISUAL_DIR, "promoter_vs_DEG_direction_all.png")
 )
 
 writeLines(c(
   "direct_target_rule\tpromoter-bound AND DEG",
   "CUTRUN_promoter_source\tcutrun_work/05_promoters/Venn_PromoterGenes_<FACTOR>.tsv",
-  "CUTRUN_threshold\tPooled matched-IgG p <=1e-4, q <=0.01, FE >=3; factor/IgG >=2 in 2/2 biological replicates; TSS +/-1,000 bp; promoter overlap >=250 bp",
+  "CUTRUN_threshold\tPooled matched-IgG MACS3 q <=0.01 and FE >=3; factor/IgG >=2 in 2/2 biological replicates; TSS +/-1,000 bp; promoter overlap >=250 bp",
   "analysis_role\tTwo-biological-replicate 2020 matched-IgG promoter evidence",
   "RNAseq_source\tfinal-local DEG tables",
   "RNAseq_threshold\tBH FDR <= 0.05 and absolute log2FC >= 0.28",

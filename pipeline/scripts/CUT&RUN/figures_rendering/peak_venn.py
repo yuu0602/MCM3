@@ -66,11 +66,19 @@ def plot_triple_venn(
                 text.set_position((x + dx, y + dy))
     axis.set_aspect("equal", adjustable="box")
     axis.set_axis_off()
-    totals = tuple(len(item) for item in sets)
-    positions = ((0.10, 0.84), (0.78, 0.77), (0.76, 0.16))
-    for label, total, position in zip(labels, totals, positions):
-        text = f"{label}\n({total:,})" if show_totals else label
-        figure.text(*position, text, ha="left", va="center", fontsize=14, fontweight="bold", color="#2A2A2A")
+    if show_totals:
+        totals = tuple(len(item) for item in sets)
+        positions = ((0.10, 0.84), (0.78, 0.77), (0.76, 0.16))
+        for label, total, position in zip(labels, totals, positions):
+            figure.text(
+                *position,
+                f"{label}\n({total:,})",
+                ha="left",
+                va="center",
+                fontsize=14,
+                fontweight="bold",
+                color="#2A2A2A",
+            )
     output.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(figure)
