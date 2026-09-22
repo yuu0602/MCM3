@@ -10,7 +10,7 @@
   filtering, and normalization procedure.
 - For each factor, two biological-replicate BAMPE libraries are pooled and compared
   with pooled matched-IgG libraries using MACS3. Downstream peaks require a direct
-  **q-value <= 0.05** and **fold enrichment >= 3**; no separate p-value threshold is
+  **q-value (FDR) <= 0.05** and **fold enrichment >= 3**; no separate p-value threshold is
   applied.
 - Promoters are **GENCODE M25 TSS +/- 1,000 bp**. A retained pooled peak must overlap
   a promoter by **at least 250 bp**. A promoter-bound gene additionally requires a
