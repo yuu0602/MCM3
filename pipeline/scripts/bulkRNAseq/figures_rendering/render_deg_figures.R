@@ -28,7 +28,7 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 2L) stop("Usage: _run_deg_analysis.R <deg_work> <reference>")
+if (length(args) != 2L) stop("Usage: 03_render_figures.py <deg_work> <reference>")
 ROOT <- normalizePath(args[[1]], mustWork = TRUE)
 REF <- normalizePath(args[[2]], mustWork = TRUE)
 MANIFEST <- file.path(ROOT, "metadata", "Salmon_quantifications.tsv")
