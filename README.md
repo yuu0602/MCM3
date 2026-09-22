@@ -4,8 +4,8 @@ This repository contains the publication pipeline for the MCM3-PSPC1-NONO projec
 
 Here is our step-by-step pipeline organization 
 
-1. RNA-seq input/reference preparation.
-2. RNA-seq quantification, differential expression, and figures.
+1. bulk-RNAseq input/reference preparation.
+2. bulk-RNAseq quantification, differential expression, and figures.
 3. CUT&RUN alignment, filtering, yeast normalization, and tracks.
 4. Matched-IgG peak calling/filtering and promoter binding.
 5. CUT&RUN figures.
