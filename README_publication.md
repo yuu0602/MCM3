@@ -115,7 +115,7 @@ python pipeline/bulkRNAseq/02_quantify_and_test.py --requantify --threads 16
 ### Stage 03 — align and normalize CUT&RUN
 
 ```bash
-python "pipeline/CUT&RUN/03_align_and_normalize.py" --from-raw --threads 16
+python "pipeline/CUT&RUN/04_align_and_normalize.py" --from-raw --threads 16
 ```
 
 - **Input:** paired-end 20200923/20200929 CUT&RUN FASTQs listed in `cutrun_work/metadata/Samples.tsv`; mm10 and `sacCer3` Bowtie2 indices in `reference/`.
@@ -125,7 +125,7 @@ python "pipeline/CUT&RUN/03_align_and_normalize.py" --from-raw --threads 16
 ### Stage 04 — call peaks and define promoter binding
 
 ```bash
-python "pipeline/CUT&RUN/04_call_peaks_and_define_binding.py" --from-raw
+python "pipeline/CUT&RUN/05_call_peaks_and_define_binding.py" --from-raw
 ```
 
 - **Input:** Stage 03 filtered factor and matched-IgG BAMs, normalized bigWigs, and `reference/gencode.vM25.annotation.gtf`.
@@ -135,7 +135,7 @@ python "pipeline/CUT&RUN/04_call_peaks_and_define_binding.py" --from-raw
 ### Stage 05 — render CUT&RUN figures
 
 ```bash
-python "pipeline/CUT&RUN/05_render_figures.py"
+python "pipeline/CUT&RUN/06_render_figures.py"
 ```
 
 - **Input:** Stage 03 bigWigs and Stage 04 peak/promoter tables, including `cutrun_work/data/Venn_Peaks_counts.tsv`.
@@ -145,7 +145,7 @@ python "pipeline/CUT&RUN/05_render_figures.py"
 ### Stage 06 — integrate binding with differential expression
 
 ```bash
-python pipeline/regulatory_target/06_define_regulatory_targets.py
+python pipeline/regulatory_target/07_define_regulatory_targets.py
 ```
 
 - **Input:** Stage 02 DEG tables, Stage 05 promoter-bound sets, and CUT&RUN tracks.

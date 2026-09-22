@@ -12,10 +12,10 @@ from pathlib import Path
 
 PREPARE = "bulkRNAseq/01_prepare_inputs.py"
 RNASEQ = "bulkRNAseq/02_quantify_and_test.py"
-CUTRUN = "CUT&RUN/03_align_and_normalize.py"
-BINDING = "CUT&RUN/04_call_peaks_and_define_binding.py"
-CUTRUN_FIGURES = "CUT&RUN/05_render_figures.py"
-REGULATORY = "regulatory_target/06_define_regulatory_targets.py"
+CUTRUN = "CUT&RUN/04_align_and_normalize.py"
+BINDING = "CUT&RUN/05_call_peaks_and_define_binding.py"
+CUTRUN_FIGURES = "CUT&RUN/06_render_figures.py"
+REGULATORY = "regulatory_target/07_define_regulatory_targets.py"
 
 
 def workflow(source: str) -> dict[str, tuple[str, ...]]:
