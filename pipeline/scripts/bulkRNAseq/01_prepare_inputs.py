@@ -333,7 +333,7 @@ def build_cutrun_manifest() -> pd.DataFrame:
         name = normalized_stem(r1)
         batch_id = metadata_token(r1, CUTRUN_BATCHES)
         factor = re.search(r"(?:^|_)(MCM3|NONO|PSPC1|IgG)(?:_|$)", name, re.I)
-        replicate = re.search(r"(?:^|_)([12])_R1$", name)
+        replicate = re.search(r"(?:^|_)([12])(?:_combined)?_R1$", name)
         if batch_id is None or factor is None or replicate is None:
             continue
         r2 = paired_fastq(r1, "_R1", "_R2")
