@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | 01 | `bulkRNAseq/01_prepare_inputs.py` | References, manifests, and local inputs |
 | 02 | `bulkRNAseq/02_quantify_and_test.py` | DEG tables and bulk-RNAseq figures |
-| 03 | `bulkRNAseq/03_render_figures.py --igv-tracks` | Optional RNA-seq IGV tracks: HISAT2 alignment, MAPQ >=30/proper-pair filtering, CPM bigWigs, and group means |
+| 03 | `bulkRNAseq/03_render_figures.py` | Optional RNA-seq IGV tracks (--igv-tracks): HISAT2 alignment, MAPQ >=30/proper-pair filtering, CPM bigWigs, and group means |
 | 04 | `CUT&RUN/04_align_and_normalize.py` | Alignments, filtered BAMs, and normalized tracks |
 | 05 | `CUT&RUN/05_call_peaks_and_define_binding.py` | Peaks and promoter-bound genes |
 | 06 | `CUT&RUN/06_render_figures.py` | CUT&RUN figures |
