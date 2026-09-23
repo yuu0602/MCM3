@@ -14,6 +14,7 @@ RUN = PROJECT.parents[2]
 CUTRUN = RUN / "cutrun_work"
 DATA = CUTRUN / "data" / "figure_inputs"
 VISUALS = CUTRUN / "visuals"
+TEXT_FREE = False
 PEAKS = DATA / "batch_stratified_peaks"
 STAGE = DATA / "peak_distribution" / "intermediate"
 GTF = RUN / "reference" / "gencode.vM25.annotation.gtf"
@@ -174,10 +175,11 @@ def annotate_and_plot(peak_beds: dict[str, Path], unit_label: str, combined: boo
 def move_visuals(names: tuple[str, ...]) -> None:
     VISUALS.mkdir(parents=True, exist_ok=True)
     for name in names:
-        source = STAGE / name
+        output_name = f"{Path(name).stem}_noTexts.png" if TEXT_FREE else name
+        source = STAGE / output_name
         if not source.is_file() or source.stat().st_size == 0:
             raise FileNotFoundError(source)
-        source.replace(VISUALS / name)
+        source.replace(VISUALS / output_name)
 
 
 def main() -> None:

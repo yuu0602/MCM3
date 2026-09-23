@@ -31,5 +31,8 @@
 
 Stage 03 creates per-target DEG tables and the canonical `Volcano_*`, `Heatmap_*`,
 `VennDiagram_UP*`, and `VennDiagram_DOWN*` PNG files under `deg_work`. The
-`*_noNumbers` Venn variants intentionally omit all labels and values inside the
+`*_noTexts` Venn variants intentionally omit all labels and values inside the
 diagram.
+
+Run Stage 03 with `--publication-figures` to render text-free versions of every
+panel in `deg_work/visuals/publication_figures`.

@@ -23,6 +23,7 @@ from config import FACTORS, REFERENCE_DIR, RNA_FDR_MAX, RNA_LOGFC_MIN, RNA_ROOT
 
 VENN_RENDERER = SCRIPT_DIR / "figures_rendering" / "venn.py"
 OUTPUT = RNA_ROOT / "visuals"
+PUBLICATION_FIGURES = OUTPUT / "publication_figures"
 
 
 def executable(name: str) -> str:
@@ -59,21 +60,21 @@ def venn_regions(sets: dict[str, set[str]]) -> dict[str, int]:
     }
 
 
-def render_venn(direction: str) -> None:
+def render_venn(direction: str, output: Path, no_text: bool = False) -> None:
     if not VENN_RENDERER.is_file():
         raise FileNotFoundError(VENN_RENDERER)
     sets = {factor: genes_for_direction(factor, direction) for factor in FACTORS}
     title = "Unregulated genes" if direction == "UP" else "Downregulated genes"
-    OUTPUT.mkdir(parents=True, exist_ok=True)
+    output.mkdir(parents=True, exist_ok=True)
     environment = os.environ.copy()
     environment.setdefault("MPLCONFIGDIR", str(RNA_ROOT.parent / ".cache" / "matplotlib"))
     counts = venn_regions(sets)
-    for suffix, hide_numbers in (("", False), ("_noNumbers", True)):
+    for suffix, hide_numbers in (("_noTexts", True),) if no_text else (("", False),):
         command = [
             sys.executable,
             str(VENN_RENDERER),
             "--out",
-            str(OUTPUT / f"VennDiagram_{direction}{suffix}.png"),
+            str(output / f"VennDiagram_{direction}{suffix}.png"),
             "--title",
             title,
             "--a-name",
@@ -105,6 +106,7 @@ def render_venn(direction: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--publication-figures", action="store_true", help="Also render text-free PNGs in deg_work/visuals/publication_figures")
     args = parser.parse_args()
 
     manifest = RNA_ROOT / "metadata" / "Salmon_quantifications.tsv"
@@ -117,6 +119,8 @@ def main() -> None:
         str(RNA_ROOT),
         str(REFERENCE_DIR),
     ]
+    if args.publication_figures:
+        r_command.append(str(PUBLICATION_FIGURES))
     if args.dry_run:
         print("[DRY-RUN]", " ".join(r_command))
         print("[DRY-RUN] Would render RNA-seq UP and DOWN Venn diagrams.")
@@ -124,7 +128,11 @@ def main() -> None:
 
     subprocess.run(r_command, check=True)
     for direction in ("UP", "DOWN"):
-        render_venn(direction)
+        render_venn(direction, OUTPUT)
+    if args.publication_figures:
+        for direction in ("UP", "DOWN"):
+            render_venn(direction, PUBLICATION_FIGURES, no_text=True)
+        print(f"[DONE] Bulk RNA-seq publication figures: {PUBLICATION_FIGURES}")
     print(f"[DONE] Bulk RNA-seq figures: {RNA_ROOT / 'visuals'}")
 
 

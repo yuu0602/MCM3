@@ -31,10 +31,12 @@ def tool(name: str, candidates: tuple[str, ...]) -> str:
     raise FileNotFoundError(f"Required executable not found: {name}")
 
 
-def render_figures(dry_run: bool) -> None:
+def render_figures(dry_run: bool, publication_figures: bool) -> None:
     command = [sys.executable, str(Path(__file__).with_name("03_render_figures.py"))]
     if dry_run:
         command.append("--dry-run")
+    if publication_figures:
+        command.append("--publication-figures")
     print("[RUN]", " ".join(command))
     subprocess.run(command, check=True)
 
@@ -44,6 +46,7 @@ def main() -> None:
     parser.add_argument("--threads", type=int, default=max(1, min(16, os.cpu_count() or 1)))
     parser.add_argument("--requantify", action="store_true", help="Rebuild Salmon quantifications from original FASTQs")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--publication-figures", action="store_true", help="Also render text-free PNGs in deg_work/visuals/publication_figures")
     args = parser.parse_args()
 
     manifest_path = RNA_ROOT / "metadata" / "Samples.tsv"
@@ -56,7 +59,7 @@ def main() -> None:
                 "Missing packaged Salmon_quantifications.tsv. Run 01_prepare_inputs.py "
                 "or use --requantify for the raw-FASTQ path."
             )
-        render_figures(args.dry_run)
+        render_figures(args.dry_run, args.publication_figures)
         return
 
     transcriptome = REFERENCE_DIR / GENCODE_TRANSCRIPTS_NAME
@@ -97,7 +100,7 @@ def main() -> None:
 
     if not args.dry_run:
         pd.DataFrame(rows).to_csv(quant_manifest, sep="\t", index=False)
-    render_figures(args.dry_run)
+    render_figures(args.dry_run, args.publication_figures)
 
 
 if __name__ == "__main__":

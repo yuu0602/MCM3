@@ -30,8 +30,9 @@ suppressPackageStartupMessages({
 FACTORS <- c("MCM3", "NONO", "PSPC1")
 MOUSE_ENSEMBL_KEYS <- AnnotationDbi::keys(org.Mm.eg.db, keytype = "ENSEMBL")
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) > 1L) stop("Usage: render_direction.R [run_root]", call. = FALSE)
+if (length(args) > 2L) stop("Usage: render_direction.R [run_root] [publication_figures]", call. = FALSE)
 RUN_ROOT <- normalizePath(args[[1]], mustWork = TRUE)
+PUBLICATION_DIR <- if (length(args) == 2L) normalizePath(args[[2]], mustWork = FALSE) else NULL
 script_args <- commandArgs(trailingOnly = FALSE)
 script_file <- sub("^--file=", "", script_args[grepl("^--file=", script_args)])[1]
 GTF_M25 <- file.path(RUN_ROOT, "reference", "gencode.vM25.annotation.gtf")
@@ -151,7 +152,7 @@ load_panel_helpers <- function() {
 draw_direction_panel <- function(panel_letter, factor, n_center, n_up, n_down,
                                  n_only_center, n_only_up, n_only_down,
                                  n_overlap_up, n_overlap_down, center_col,
-                                 out_png) {
+                                 out_png, no_text = FALSE) {
   stop_if_missing(CHAIN_VENN_HELPER)
   args <- c(
     CHAIN_VENN_HELPER, "--out", out_png,
@@ -168,6 +169,7 @@ draw_direction_panel <- function(panel_letter, factor, n_center, n_up, n_down,
     "--fs-num-center", 22, "--fs-num-overlap", 17,
     "--fs-bottom-lab", 20, "--fs-bottom-n", 18
   )
+  if (no_text) args <- c(args, "--no-text")
   status <- system2(find_python(), args = shQuote(as.character(args)))
   if (status != 0L) stop("Chain-Venn helper failed with status ", status, call. = FALSE)
 }
@@ -209,12 +211,14 @@ draw_venn <- function(sets, out_png, hide_numbers = FALSE) {
 
 dir.create(OUTDIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(VISUAL_DIR, recursive = TRUE, showWarnings = FALSE)
+if (!is.null(PUBLICATION_DIR)) dir.create(PUBLICATION_DIR, recursive = TRUE, showWarnings = FALSE)
 panel <- load_panel_helpers()
 summary_rows <- list()
 count_rows <- list()
 direct_sets <- list()
 mapping_audits <- list()
 panel_pngs <- character()
+panel_pngs_no_text <- character()
 panel_letters <- c("A", "B", "C")
 
 for (i in seq_along(FACTORS)) {
@@ -263,6 +267,17 @@ for (i in seq_along(FACTORS)) {
     n_overlap_down = length(classes$B_bound_DOWN), center_col = center_col,
     out_png = panel_png
   )
+  if (!is.null(PUBLICATION_DIR)) {
+    panel_no_text_png <- file.path(PUBLICATION_DIR, paste0("promoter_vs_DEG_direction_", factor, "_noTexts.png"))
+    draw_direction_panel(
+      panel_letter = panel_letters[[i]], factor = factor, n_center = length(bound), n_up = length(up), n_down = length(down),
+      n_only_center = length(classes$C_bound_NOCHANGE), n_only_up = length(up) - length(classes$A_bound_UP),
+      n_only_down = length(down) - length(classes$B_bound_DOWN), n_overlap_up = length(classes$A_bound_UP),
+      n_overlap_down = length(classes$B_bound_DOWN), center_col = center_col,
+      out_png = panel_no_text_png, no_text = TRUE
+    )
+    panel_pngs_no_text <- c(panel_pngs_no_text, panel_no_text_png)
+  }
   panel_pngs <- c(panel_pngs, panel_png)
 }
 
@@ -271,9 +286,9 @@ regions <- draw_venn(
   direct_sets,
   file.path(VISUAL_DIR, "Venn_target.png")
 )
-draw_venn(
+if (!is.null(PUBLICATION_DIR)) draw_venn(
   direct_sets,
-  file.path(VISUAL_DIR, "Venn_target_noNumbers.png"),
+  file.path(PUBLICATION_DIR, "Venn_target_noTexts.png"),
   hide_numbers = TRUE
 )
 write.table(do.call(rbind, summary_rows), file.path(OUTDIR, "promoter_vs_DEG_direction_summary.tsv"),
@@ -306,6 +321,9 @@ write.table(do.call(rbind, lapply(names(region_genes), function(region) {
 
 panel$stack_three_pngs(panel_pngs,
   out_png = file.path(VISUAL_DIR, "promoter_vs_DEG_direction_all.png")
+)
+if (!is.null(PUBLICATION_DIR)) panel$stack_three_pngs(panel_pngs_no_text,
+  out_png = file.path(PUBLICATION_DIR, "promoter_vs_DEG_direction_all_noTexts.png")
 )
 
 writeLines(c(

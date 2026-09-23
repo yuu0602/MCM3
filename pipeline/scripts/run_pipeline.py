@@ -35,8 +35,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--step", choices=("all", "prepare", "rna", "cutrun", "regulatory", "figures"), default="all")
     parser.add_argument("--source", choices=("accepted", "raw"), default="accepted")
-    parser.add_argument("--threads", type=int, default=max(1, min(16, os.cpu_count() or 1)))
+    parser.add_argument("--threads", type=int, default=max(1, min(10, os.cpu_count() or 1)))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--publication-figures", action="store_true", help="Render text-free bulk RNA-seq and CUT&RUN PNGs in visuals/publication_figures folders")
     args = parser.parse_args()
 
     root = Path(__file__).resolve().parent
@@ -52,6 +53,8 @@ def main() -> None:
             command.append("--requantify")
         if args.source == "raw" and relative in {CUTRUN, BINDING}:
             command.append("--from-raw")
+        if args.publication_figures and relative in {RNASEQ, CUTRUN_FIGURES, REGULATORY}:
+            command.append("--publication-figures")
         if args.dry_run:
             command.append("--dry-run")
         print("[RUN]", " ".join(command), flush=True)

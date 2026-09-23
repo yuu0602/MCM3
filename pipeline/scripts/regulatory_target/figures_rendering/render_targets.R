@@ -28,8 +28,9 @@ script_file <- gsub("~+~", " ", script_file, fixed = TRUE)
 if (is.na(script_file)) stop("Cannot resolve pipeline script path", call. = FALSE)
 DEFAULT_RUN_ROOT <- normalizePath(file.path(dirname(script_file), "..", "..", ".."), mustWork = TRUE)
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) > 1L) stop("Usage: render_targets.R [run_root]", call. = FALSE)
+if (length(args) > 2L) stop("Usage: render_targets.R [run_root] [publication_figures]", call. = FALSE)
 RUN_ROOT <- normalizePath(if (length(args) >= 1L) args[[1]] else DEFAULT_RUN_ROOT, mustWork = TRUE)
+PUBLICATION_DIR <- if (length(args) == 2L) normalizePath(args[[2]], mustWork = FALSE) else NULL
 COVERAGE_AXIS_LABEL <- "Coverage"
 GROUP_BASE_DIR <- file.path(RUN_ROOT, "regulatory_work")
 REGTARGET_BASE_DIR <- GROUP_BASE_DIR
@@ -69,6 +70,7 @@ dir.create(GROUP_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(REGTARGET_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(GROUP_VISUAL_DIR, recursive = TRUE, showWarnings = FALSE)
 dir.create(REGTARGET_VISUAL_DIR, recursive = TRUE, showWarnings = FALSE)
+if (!is.null(PUBLICATION_DIR)) dir.create(PUBLICATION_DIR, recursive = TRUE, showWarnings = FALSE)
 for (path in c(GROUP_DIR, GTF, COMPUTE_MATRIX, PLOT_PROFILE, unname(BIGWIGS))) {
   if (!file.exists(path)) stop("Missing required input: ", path, call. = FALSE)
 }
@@ -238,6 +240,15 @@ make_group_profile <- function(group_name, genes, tracks, gtf_genes) {
   out_png <- file.path(REGTARGET_VISUAL_DIR, paste0("Metaprofile_Group", group_name, ".png"))
   # Match the single-panel Profile_MCM3_NONO aspect ratio (7.4:5.6).
   ggplot2::ggsave(out_png, p, width = 10.5, height = 10.5 * 5.6 / 7.4, dpi = 300, bg = "white")
+  if (!is.null(PUBLICATION_DIR)) {
+    p_no_text <- p + ggplot2::theme(
+      plot.title = ggplot2::element_blank(), axis.title = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank(),
+      legend.position = "none"
+    )
+    ggplot2::ggsave(file.path(PUBLICATION_DIR, paste0("Metaprofile_Group", group_name, "_noTexts.png")), p_no_text,
+                    width = 10.5, height = 10.5 * 5.6 / 7.4, dpi = 300, bg = "white")
+  }
   for (path in c(out_png, profile, bed)) {
     target <- file.path(if (grepl("\\.png$", path)) GROUP_VISUAL_DIR else GROUP_DIR, basename(path))
     if (!identical(normalizePath(path, mustWork = FALSE), normalizePath(target, mustWork = FALSE))) file.copy(path, target, overwrite = TRUE)
@@ -275,7 +286,7 @@ make_mcm3_target_profile <- function(gtf_genes) {
       ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),
       inherit.aes = FALSE, fill = "#F2F2F2", color = NA
     ) +
-    ggplot2::geom_line(linewidth = 1.7, na.rm = TRUE) +
+    ggplot2::geom_line(linewidth = 1.8, na.rm = TRUE) +
     ggplot2::geom_vline(xintercept = c(-1, 1), linetype = 2, linewidth = 0.9, color = "#444444") +
     ggplot2::scale_color_manual(
       values = c("MCM3 up-regulated targets" = "#2855B2", "MCM3 down-regulated targets" = "#74E37D"),
@@ -288,6 +299,15 @@ make_mcm3_target_profile <- function(gtf_genes) {
     ggplot2::theme(plot.title = ggplot2::element_text(size = 21, face = "bold", hjust = 0.5, margin = ggplot2::margin(b = 10)), axis.line = ggplot2::element_line(linewidth = 1), panel.border = ggplot2::element_rect(color = "black", fill = NA, linewidth = 1.0), axis.ticks = ggplot2::element_line(linewidth = 1), axis.text = ggplot2::element_text(size = 15, face = "bold", color = "black"), axis.title = ggplot2::element_text(size = 18, face = "bold"), legend.position = "top", legend.direction = "horizontal", legend.text = ggplot2::element_text(size = 15, face = "bold"), legend.key.width = grid::unit(1.1, "cm"), plot.margin = ggplot2::margin(18, 18, 18, 24))
   out_png <- file.path(REGTARGET_VISUAL_DIR, "Metaprofile_MCM3_target.png")
   ggplot2::ggsave(out_png, p, width = 14.6667, height = 14.6667 * 5.6 / 7.4, dpi = 300, bg = "white")
+  if (!is.null(PUBLICATION_DIR)) {
+    p_no_text <- p + ggplot2::theme(
+      plot.title = ggplot2::element_blank(), axis.title = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank(),
+      legend.position = "none"
+    )
+    ggplot2::ggsave(file.path(PUBLICATION_DIR, "Metaprofile_MCM3_target_noTexts.png"), p_no_text,
+                    width = 14.6667, height = 14.6667 * 5.6 / 7.4, dpi = 300, bg = "white")
+  }
   target <- file.path(GROUP_VISUAL_DIR, basename(out_png))
   if (!identical(normalizePath(out_png, mustWork = FALSE), normalizePath(target, mustWork = FALSE))) file.copy(out_png, target, overwrite = TRUE)
   write.table(data.frame(direction = c("Up", "Down"), n_genes = c(n_up, n_down)), paste0(prefix, "_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
@@ -305,6 +325,7 @@ groups <- list(
 regions <- data.table::fread(file.path(GROUP_DIR, "Venn_target_genes.tsv"), data.table = FALSE)
 summary_rows <- list()
 pie_paths <- character()
+pie_no_text_paths <- character()
 for (name in names(GROUPS)) {
   expected <- sort(unique(regions$gene[regions$region == GROUPS[[name]]$region]))
   if (!setequal(groups[[name]], expected)) stop("Venn mismatch for group ", name, call. = FALSE)
@@ -317,8 +338,12 @@ for (name in names(GROUPS)) {
   out <- file.path(GROUP_VISUAL_DIR, paste0("Pie_Group", name, ".png"))
   ggplot2::ggsave(out, plot, width = 5.2, height = 5.2, dpi = 300, bg = "white")
   pie_paths <- c(pie_paths, out)
-  plot_no_labels <- pie_plot(NULL, tab, show_numbers = FALSE, show_labels = FALSE)
-  ggplot2::ggsave(file.path(GROUP_VISUAL_DIR, paste0("Pie_Group", name, "_noLabels.png")), plot_no_labels, width = 5.2, height = 5.2, dpi = 300, bg = "white")
+  if (!is.null(PUBLICATION_DIR)) {
+    plot_no_text <- pie_plot(NULL, tab, show_numbers = FALSE, show_labels = FALSE)
+    out_no_text <- file.path(PUBLICATION_DIR, paste0("Pie_Group", name, "_noTexts.png"))
+    ggplot2::ggsave(out_no_text, plot_no_text, width = 5.2, height = 5.2, dpi = 300, bg = "white")
+    pie_no_text_paths <- c(pie_no_text_paths, out_no_text)
+  }
 }
 write.table(do.call(rbind, summary_rows), file.path(GROUP_DIR, "Pie_Groups_summary.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
 write.table(data.frame(group = names(GROUPS), group_definition = vapply(GROUPS, `[[`, character(1), "label"), venn_region = vapply(GROUPS, `[[`, character(1), "region"), n_genes = vapply(groups, length, integer(1))), file.path(GROUP_DIR, "Pie_Groups_definitions.tsv"), sep = "\t", quote = FALSE, row.names = FALSE)
@@ -335,6 +360,19 @@ for (i in seq_along(pie_paths)) {
 }
 grid::popViewport()
 grDevices::dev.off()
+if (!is.null(PUBLICATION_DIR)) {
+  grDevices::png(file.path(PUBLICATION_DIR, "Pie_Groups_noTexts.png"), width = 3150, height = 3000, res = 300, bg = "white")
+  grid::grid.newpage()
+  grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 2)))
+  for (i in seq_along(pie_no_text_paths)) {
+    image <- png::readPNG(pie_no_text_paths[[i]])
+    grid::pushViewport(grid::viewport(layout.pos.row = if (i <= 2) 1 else 2, layout.pos.col = if (i %% 2 == 1) 1 else 2))
+    grid::grid.raster(image, width = grid::unit(1, "npc"), height = grid::unit(1, "npc"), interpolate = TRUE)
+    grid::popViewport()
+  }
+  grid::popViewport()
+  grDevices::dev.off()
+}
 
 input_parameters <- readLines(file.path(GROUP_DIR, "AnalysisParameters.tsv"), warn = FALSE)
 writeLines(c(input_parameters, "mix_color\t#F3D37A (yellow)"), file.path(GROUP_DIR, "Pie_Groups_parameters.tsv"))
@@ -342,7 +380,8 @@ writeLines(c(input_parameters, "mix_color\t#F3D37A (yellow)"), file.path(GROUP_D
 for (factor in c("NONO", "PSPC1")) {
   all_targets <- union(union(class_sets[[factor]]$up, class_sets[[factor]]$down), class_sets[[factor]]$indirect)
   binding_pie(factor, all_targets, direct_sets[[factor]], file.path(GROUP_VISUAL_DIR, paste0("Pie_TargetBinding_", factor, ".png")))
-  binding_pie(factor, all_targets, direct_sets[[factor]], file.path(GROUP_VISUAL_DIR, paste0("Pie_TargetBinding_", factor, "_noNumbers.png")), show_numbers = FALSE)
+  if (!is.null(PUBLICATION_DIR)) binding_pie(factor, all_targets, direct_sets[[factor]],
+    file.path(PUBLICATION_DIR, paste0("Pie_TargetBinding_", factor, "_noTexts.png")), show_numbers = FALSE)
 }
 
 gtf_genes <- read_gtf_genes(GTF)

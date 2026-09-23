@@ -23,6 +23,7 @@ TAG = "q5e2_fe3_min2of2"
 HELPERS = Path(__file__).resolve().parent / "figures_rendering"
 FIGURE_DATA = CUTRUN_ROOT / "data" / "figure_inputs"
 VISUALS = CUTRUN_ROOT / "visuals"
+PUBLICATION_FIGURES = VISUALS / "publication_figures"
 TRACK_ROOT = CUTRUN_ROOT / "03_bigwig" / "IGV_representation"
 TRACKS = {factor: TRACK_ROOT / f"{factor}_mean.bw" for factor in FACTORS}
 IGG = TRACK_ROOT / "IgG_mean.bw"
@@ -55,6 +56,23 @@ def prepare_inputs() -> None:
     shutil.copy2(counts, FIGURE_DATA / "Venn_Peaks_counts.tsv")
 
 
+def enable_text_free_rendering() -> None:
+    """Suppress all Matplotlib text and append `_noTexts` during figure export."""
+    from matplotlib.figure import Figure
+    from matplotlib.text import Text
+
+    original_savefig = Figure.savefig
+
+    def savefig_without_text(self, fname, *args, **kwargs):
+        path = Path(fname)
+        if path.suffix.lower() == ".png":
+            fname = path.with_name(f"{path.stem}_noTexts{path.suffix}")
+        return original_savefig(self, fname, *args, **kwargs)
+
+    Figure.savefig = savefig_without_text
+    Text.draw = lambda self, renderer: None
+
+
 def configure_primary():
     module = load_module("render_profiles.py")
     module.PROJECT = HELPERS
@@ -79,6 +97,7 @@ def configure_distribution():
     module.CUTRUN = CUTRUN_ROOT
     module.DATA = FIGURE_DATA
     module.VISUALS = VISUALS
+    module.TEXT_FREE = False
     module.PEAKS = FIGURE_DATA / "batch_stratified_peaks"
     module.STAGE = FIGURE_DATA / "peak_distribution" / "intermediate"
     module.GTF = REFERENCE_DIR / "gencode.vM25.annotation.gtf"
@@ -110,31 +129,51 @@ def configure_additional():
 
 
 def main() -> None:
+    global VISUALS
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--rpkm-only", action="store_true")
+    parser.add_argument("--publication-figures", action="store_true", help="Also render text-free PNGs in cutrun_work/visuals/publication_figures")
+    parser.add_argument("--no-text", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    if args.no_text:
+        VISUALS = PUBLICATION_FIGURES
+        enable_text_free_rendering()
     if args.dry_run:
         print("[DRY-RUN] Would render the registered CUT&RUN figures.")
         return
     prepare_inputs()
+    if args.publication_figures:
+        PUBLICATION_FIGURES.mkdir(parents=True, exist_ok=True)
     required = [REFERENCE_DIR / "gencode.vM25.annotation.gtf", CUTRUN_ROOT / "data" / "GeneBodies_M25.bed6", IGG, *TRACKS.values()]
     missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
     if missing:
         raise FileNotFoundError("Missing CUT&RUN figure inputs:\n" + "\n".join(missing))
     primary = configure_primary()
+    primary.NO_TEXT_VISUALS = None
+    primary.TEXT_FREE = args.no_text
     if args.rpkm_only:
         primary.render_rpkm_profiles(primary.promoter_sets())
+        if args.publication_figures and not args.no_text:
+            subprocess.run([sys.executable, str(Path(__file__).resolve()), "--no-text", "--rpkm-only"], check=True)
         print(f"[DONE] CUT&RUN RPKM figures: {VISUALS}")
         return
     primary.main()
     distribution = configure_distribution()
+    distribution.TEXT_FREE = args.no_text
     distribution.main()
     counts = FIGURE_DATA / "peak_distribution" / "Pie_PeakDistribution_counts.tsv"
     shutil.copy2(counts, CUTRUN_ROOT / "data" / "Pie_PeakDistribution_counts.tsv")
-    configure_additional().main()
+    additional = configure_additional()
+    additional.NO_TEXT_VISUALS = None
+    additional.main()
     peak_gene_module = load_module(HELPERS / "render_peak_associated_genes.py")
+    peak_gene_module.VISUALS = VISUALS
+    peak_gene_module.NO_TEXT_VISUALS = None
     peak_gene_module.main()
+    if args.publication_figures and not args.no_text:
+        subprocess.run([sys.executable, str(Path(__file__).resolve()), "--no-text"], check=True)
+        print(f"[DONE] CUT&RUN publication figures: {PUBLICATION_FIGURES}")
     print(f"[DONE] CUT&RUN figures: {VISUALS}")
 
 

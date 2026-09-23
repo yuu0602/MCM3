@@ -28,16 +28,18 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 2L) stop("Usage: 03_render_figures.py <deg_work> <reference>")
+if (!(length(args) %in% c(2L, 3L))) stop("Usage: 03_render_figures.py <deg_work> <reference> [publication_figures]")
 ROOT <- normalizePath(args[[1]], mustWork = TRUE)
 REF <- normalizePath(args[[2]], mustWork = TRUE)
 MANIFEST <- file.path(ROOT, "metadata", "Salmon_quantifications.tsv")
 OUT_DATA <- file.path(ROOT, "data")
 OUT_VIS <- file.path(ROOT, "visuals")
+OUT_PUB <- if (length(args) == 3L) normalizePath(args[[3]], mustWork = FALSE) else NULL
 COMPAT_ROOT <- file.path(ROOT, "limma_outputs")
 COMPAT_DEG <- file.path(COMPAT_ROOT, "DEGs")
 dir.create(OUT_DATA, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_VIS, recursive = TRUE, showWarnings = FALSE)
+if (!is.null(OUT_PUB)) dir.create(OUT_PUB, recursive = TRUE, showWarnings = FALSE)
 dir.create(COMPAT_DEG, recursive = TRUE, showWarnings = FALSE)
 
 FDR_MAX <- 0.05
@@ -114,6 +116,10 @@ plot_volcano <- function(tab, factor) {
           axis.title.y = element_text(face = "bold", colour = "black"),
           axis.text = element_text(colour = "black"), plot.margin = margin(8, 10, 8, 10))
   ggsave(file.path(OUT_VIS, paste0("Volcano_", factor, ".png")), p, width = 7.2, height = 5.6, dpi = 300, bg = "white")
+  if (!is.null(OUT_PUB)) {
+    p_no_text <- p + theme_void() + theme(plot.margin = margin(8, 10, 8, 10))
+    ggsave(file.path(OUT_PUB, paste0("Volcano_", factor, "_noTexts.png")), p_no_text, width = 7.2, height = 5.6, dpi = 300, bg = "white")
+  }
 }
 
 plot_heatmap <- function(logcpm, sig, subset_meta, factor) {
@@ -143,6 +149,15 @@ plot_heatmap <- function(logcpm, sig, subset_meta, factor) {
   png_type <- if (capabilities("aqua")) "quartz" else if (capabilities("cairo")) "cairo" else "Xlib"
   png(file.path(OUT_VIS, paste0("Heatmap_", factor, ".png")), width = width_in, height = height_in, units = "in", res = 300, type = png_type)
   grid.newpage(); grid.draw(ph$gtable); dev.off()
+  if (!is.null(OUT_PUB)) {
+    ordered_z <- z[ph$tree_row$order, , drop = FALSE]
+    ph_no_text <- pheatmap(ordered_z, color = colorRampPalette(c("#2B6CB0", "#FFFFFF", "#C53030"))(101),
+                            breaks = seq(-2, 2, length.out = 101), cluster_rows = FALSE, cluster_cols = FALSE,
+                            show_rownames = FALSE, show_colnames = FALSE, border_color = NA,
+                            legend = FALSE, silent = TRUE)
+    png(file.path(OUT_PUB, paste0("Heatmap_", factor, "_noTexts.png")), width = width_in, height = height_in, units = "in", res = 300, type = png_type)
+    grid.newpage(); grid.draw(ph_no_text$gtable); dev.off()
+  }
   write_tsv(tibble(gene_id = rownames(z)), file.path(OUT_DATA, paste0("Heatmap_", factor, "_genes.tsv")))
 }
 

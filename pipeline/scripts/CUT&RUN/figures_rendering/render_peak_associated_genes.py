@@ -12,6 +12,7 @@ RUN = PROJECT.parents[2]
 CUTRUN = RUN / "cutrun_work"
 DATA = CUTRUN / "data" / "figure_inputs"
 VISUALS = CUTRUN / "visuals"
+NO_TEXT_VISUALS: Path | None = None
 GTF = RUN / "reference" / "gencode.vM25.annotation.gtf"
 FACTORS = ("MCM3", "NONO", "PSPC1")
 
@@ -135,7 +136,8 @@ def main() -> None:
     pd.DataFrame(annotation_rows).to_csv(output / "PeakAssociatedGenes_annotation_counts.tsv", sep="\t", index=False)
     factor_sets = tuple(set(assigned[factor].gene) for factor in FACTORS)
     venn.plot_triple_venn(factor_sets, FACTORS, VISUALS / "Venn_PeakAssociatedGenes.png")
-    venn.plot_triple_venn(factor_sets, FACTORS, VISUALS / "Venn_PeakAssociatedGenes_noNumbers.png", show_numbers=False, show_totals=False)
+    if NO_TEXT_VISUALS is not None:
+        venn.plot_triple_venn(factor_sets, FACTORS, NO_TEXT_VISUALS / "Venn_PeakAssociatedGenes_noTexts.png", show_numbers=False, show_totals=False)
     print("[DONE] Whole-genome nearest-TSS peak-associated gene figures:", VISUALS)
 
 

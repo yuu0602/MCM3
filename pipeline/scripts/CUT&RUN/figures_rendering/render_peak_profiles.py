@@ -20,6 +20,7 @@ RUN = PROJECT.parents[2]
 CUTRUN = RUN / "cutrun_work"
 DATA = CUTRUN / "data" / "figure_inputs"
 VISUALS = CUTRUN / "visuals"
+NO_TEXT_VISUALS: Path | None = None
 TAG = "q5e2_fe3_min2of2"
 GTF = RUN / "reference" / "gencode.vM25.annotation.gtf"
 GENE_BED = CUTRUN / "data" / "GeneBodies_M25.bed6"
@@ -78,10 +79,11 @@ def draw_reference_venn() -> None:
     venn.plot_triple_venn(
         values, FACTORS, VISUALS / "Venn_Peaks.png",
     )
-    venn.plot_triple_venn(
-        values, FACTORS, VISUALS / "Venn_Peaks_noNumbers.png",
-        show_numbers=False, show_totals=False,
-    )
+    if NO_TEXT_VISUALS is not None:
+        venn.plot_triple_venn(
+            values, FACTORS, NO_TEXT_VISUALS / "Venn_Peaks_noTexts.png",
+            show_numbers=False, show_totals=False,
+        )
 
 
 
@@ -321,7 +323,7 @@ def render_promoter_gene_profile() -> None:
     genes = set().union(*sets.values())
     region_bed = OUT / "Metaprofile_PromoterGenes_regions.bed"
     annotation = load_module(PROJECT / "annotation.py", "promoter_annotation")
-    n_genes = annotation.write_gene_bed(GTF, genes, region_bed)
+    annotation.write_gene_bed(GTF, genes, region_bed)
     _, values = matrix(
         OUT / "Metaprofile_PromoterGenes_matrix.gz",
         region_bed,
@@ -347,18 +349,13 @@ def render_promoter_gene_profile() -> None:
     axis.set_ylim(0.0, max(float(np.max(profile)) for profile in profiles.values()) * 1.05)
     axis.set_xticks((-3.0, 0.0, 2.0, 3.0), ("-3.0", "TSS", "TES", "3.0"))
     axis.set_title("CUT&RUN promoter-bound genes", fontsize=14, fontweight="bold", pad=18)
-    axis.text(
-        .5, 1.012,
-        f"p ≤ 1e-4; q ≤ 0.01; support 2/2; overlap ≥250 bp; union n={n_genes:,}",
-        transform=axis.transAxes, ha="center", va="bottom", fontsize=9, fontweight="bold",
-    )
     axis.set_xlabel("Relative position (kb)", fontsize=15, fontweight="bold")
     axis.set_ylabel("Coverage", fontsize=15, fontweight="bold")
     style_axis(axis, 13)
     legend = axis.legend(frameon=False, fontsize=12, loc="center left", bbox_to_anchor=(1.02, .5))
     for label in legend.get_texts():
         label.set_fontweight("bold")
-    fig.subplots_adjust(left=.13, right=.76, bottom=.16, top=.79)
+    fig.subplots_adjust(left=.13, right=.76, bottom=.16, top=.84)
     save(fig, "Metaprofile_PromoterGenes.png")
 
 

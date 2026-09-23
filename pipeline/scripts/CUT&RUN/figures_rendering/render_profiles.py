@@ -17,6 +17,8 @@ RUN = PROJECT.parents[2]
 CUTRUN = RUN / "cutrun_work"
 DATA = CUTRUN / "data" / "figure_inputs"
 VISUALS = CUTRUN / "visuals"
+NO_TEXT_VISUALS: Path | None = None
+TEXT_FREE = False
 PROMOTER = DATA / "promoter_gene_venn"
 TAG = "q5e2_fe3_min2of2"
 FACTORS = ("MCM3", "NONO", "PSPC1")
@@ -73,11 +75,12 @@ def render_promoter_venn(sets: dict[str, set[str]]) -> None:
         VISUALS / "Venn_PromoterGenes.png",
         show_numbers=True,
     )
-    module.plot_venn(
-        sets,
-        VISUALS / "Venn_PromoterGenes_noNumbers.png",
-        show_numbers=False,
-    )
+    if NO_TEXT_VISUALS is not None:
+        module.plot_venn(
+            sets,
+            NO_TEXT_VISUALS / "Venn_PromoterGenes_noTexts.png",
+            show_numbers=False,
+        )
 
 
 def render_promoter_profiles(sets: dict[str, set[str]]) -> None:
@@ -195,20 +198,23 @@ levels <- strsplit(args[4], "\\|", fixed = FALSE)[[1]]
 labels <- strsplit(args[5], "\\|", fixed = FALSE)[[1]]
 df$group <- factor(df$group, levels = levels)
 cols <- c("#cf111f", "#f2a010", "#4f7db1", "#777777")
+no_text <- as.logical(args[7])
 png(args[2], width = 2400, height = 1816, res = 300, bg = "white")
-par(mar = c(11, 7, 2, 2) + 0.1, cex.axis = 1.25, cex.lab = 1.45, font.axis = 2, font.lab = 2)
+if (no_text) par(mar = c(.5, .5, .5, .5)) else par(mar = c(11, 7, 2, 2) + 0.1, cex.axis = 1.25, cex.lab = 1.45, font.axis = 2, font.lab = 2)
 boxplot(value ~ group, data = df, col = cols, border = "#222222", lwd = 2.0,
-        ylab = args[3], xlab = "", xaxt = "n", yaxt = "n", outline = FALSE,
+        ylab = if (no_text) "" else args[3], xlab = "", xaxt = "n", yaxt = "n", outline = FALSE,
         ylim = c(0, as.numeric(args[6])), whisklty = 1, staplelty = 1)
-axis(1, at = seq_along(levels), labels = FALSE, tick = FALSE)
-text(x = seq_along(levels), y = rep(par("usr")[3] - 0.39, length(levels)), labels = labels,
-     srt = 35, xpd = TRUE, adj = 1, cex = 0.82, font = 2)
-axis(2, at = seq(0, as.numeric(args[6]), by = 1), labels = seq(0, as.numeric(args[6]), by = 1), las = 1, cex.axis = 1.25, font = 2)
+if (!no_text) {
+  axis(1, at = seq_along(levels), labels = FALSE, tick = FALSE)
+  text(x = seq_along(levels), y = rep(par("usr")[3] - 0.39, length(levels)), labels = labels,
+       srt = 35, xpd = TRUE, adj = 1, cex = 0.82, font = 2)
+  axis(2, at = seq(0, as.numeric(args[6]), by = 1), labels = seq(0, as.numeric(args[6]), by = 1), las = 1, cex.axis = 1.25, font = 2)
+}
 dev.off()
 })
 '''
         process = subprocess.run(
-            [RSCRIPT, "-", str(values_tsv), str(output_png), module.SIGNAL_LABEL, "|".join(levels), "|".join(labels), str(module.Y_MAX)],
+            [RSCRIPT, "-", str(values_tsv), str(output_png), module.SIGNAL_LABEL, "|".join(levels), "|".join(labels), str(module.Y_MAX), str(TEXT_FREE).upper()],
             input=r_script,
             text=True,
             capture_output=True,
@@ -220,7 +226,8 @@ dev.off()
     module.r_plot = fitted_r_plot
     module.main()
     for name in ("MCM3_RPKM.png", "NONO_RPKM.png", "PSPC1_RPKM.png"):
-        (outdir / name).replace(VISUALS / name)
+        output_name = f"{Path(name).stem}_noTexts.png" if TEXT_FREE else name
+        (outdir / name).replace(VISUALS / output_name)
     if module.SUMMARY.is_file():
         module.SUMMARY.replace(DATA / "rpkm_profiles" / module.SUMMARY.name)
 
