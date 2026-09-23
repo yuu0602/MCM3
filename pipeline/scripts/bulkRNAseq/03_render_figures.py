@@ -4,12 +4,10 @@
 from __future__ import annotations
 
 import argparse
-import gzip
 import os
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -35,19 +33,21 @@ TRACK_GROUPS = {
 
 
 def executable(name: str) -> str:
-    path = shutil.which(name)
-    if path:
-        return path
     environment_path = Path(sys.prefix) / "bin" / name
     if environment_path.is_file() and environment_path.stat().st_mode & 0o111:
         return str(environment_path)
+    path = shutil.which(name)
+    if path:
+        return path
     raise FileNotFoundError(f"Required executable not found on PATH: {name}")
 
 
 def run(command: list[str], dry_run: bool = False) -> None:
     print("[RUN]", " ".join(command), flush=True)
     if not dry_run:
-        subprocess.run(command, check=True)
+        environment = os.environ.copy()
+        environment["PATH"] = f"{Path(sys.prefix) / 'bin'}:{environment.get('PATH', '')}"
+        subprocess.run(command, check=True, env=environment)
 
 
 def remove_tree(path: Path) -> None:
@@ -65,21 +65,16 @@ def bam_is_valid(samtools: str, bam: Path) -> bool:
     ).returncode == 0
 
 
-def star_temporary_root() -> Path:
-    root = Path(os.environ.get("MCM3_STAR_TMPDIR", tempfile.gettempdir())) / "mcm3_rnaseq_star"
-    root.mkdir(parents=True, exist_ok=True)
-    probe = root / f".fifo_probe_{os.getpid()}"
-    try:
-        os.mkfifo(probe)
-    except OSError as error:
-        raise RuntimeError(
-            f"STAR temporary directory does not support FIFO files: {root}. "
-            "Set MCM3_STAR_TMPDIR to a FIFO-capable local filesystem."
-        ) from error
-    finally:
-        if probe.exists() or probe.is_fifo():
-            probe.unlink()
-    return root
+def bam_is_usable(samtools: str, bam: Path) -> bool:
+    if not bam_is_valid(samtools, bam):
+        return False
+    result = subprocess.run(
+        [samtools, "view", "-c", "-F", "4", str(bam)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0 and int(result.stdout.strip() or "0") > 0
 
 
 def selected_samples() -> pd.DataFrame:
@@ -90,76 +85,66 @@ def selected_samples() -> pd.DataFrame:
     return samples
 
 
-def read_length(fastq: Path) -> int:
-    with gzip.open(fastq, "rt") as handle:
-        next(handle)
-        return len(next(handle).strip())
-
-
-def star_index(star: str, samples: pd.DataFrame, output: Path, threads: int, dry_run: bool) -> Path:
-    index = output / "reference" / "STAR_GRCm38_GENCODE_M25_SAsparse3"
-    if (index / "Genome").is_file():
-        return index
+def hisat2_index(hisat2_build: str, splice_sites: str, exons: str, output: Path, threads: int, dry_run: bool) -> Path:
+    index = output / "reference" / "HISAT2_GRCm38_GENCODE_M25"
+    prefix = index / "mm10_gencodeM25"
+    expected_index_files = [Path(f"{prefix}.{number}.ht2") for number in range(1, 9)]
+    if all(path.is_file() and path.stat().st_size > 0 for path in expected_index_files):
+        return prefix
     fasta = REFERENCE_DIR / MM10_FASTA_NAME
     gtf = REFERENCE_DIR / "gencode.vM25.annotation.gtf"
     if not fasta.is_file() or not gtf.is_file():
         raise FileNotFoundError("Missing mm10 FASTA or GENCODE M25 GTF in pipeline/reference")
     index.mkdir(parents=True, exist_ok=True)
-    run(
-        [
-            star, "--runMode", "genomeGenerate", "--runThreadN", str(threads),
-            "--genomeDir", str(index), "--genomeFastaFiles", str(fasta),
-            "--sjdbGTFfile", str(gtf), "--sjdbOverhang",
-            str(max(read_length(Path(path)) for path in samples["r1"]) - 1),
-            "--genomeSAindexNbases", "13", "--genomeSAsparseD", "3",
-        ],
-        dry_run,
-    )
-    return index
+    splice_file = index / "splice_sites.txt"
+    exon_file = index / "exons.txt"
+    for command, destination in (([splice_sites, str(gtf)], splice_file), ([exons, str(gtf)], exon_file)):
+        print("[RUN]", " ".join(command), ">", destination, flush=True)
+        if not dry_run:
+            with destination.open("w") as handle:
+                environment = os.environ.copy()
+                environment["PATH"] = f"{Path(sys.prefix) / 'bin'}:{environment.get('PATH', '')}"
+                subprocess.run(command, stdout=handle, check=True, env=environment)
+    run([hisat2_build, "-p", str(threads), "--ss", str(splice_file), "--exon", str(exon_file), str(fasta), str(prefix)], dry_run)
+    return prefix
 
 
-def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: pd.Series, output: Path, temporary_root: Path, threads: int, dry_run: bool) -> tuple[Path, Path]:
+def align_sample(hisat2: str, samtools: str, bam_coverage: str, index_prefix: Path, row: pd.Series, output: Path, threads: int, dry_run: bool) -> tuple[Path, Path]:
     sample = str(row["sample_id"])
     sample_dir = output / "alignments" / sample
     sample_dir.mkdir(parents=True, exist_ok=True)
-    temporary_dir = temporary_root / sample
     sorted_bam = sample_dir / "Aligned.sortedByCoord.out.bam"
     filtered_bam = sample_dir / f"{sample}.primary.proper.MAPQ30.bam"
     track = output / "individual" / f"{sample}.bw"
     track.parent.mkdir(parents=True, exist_ok=True)
-    if not bam_is_valid(samtools, filtered_bam):
+    if not bam_is_usable(samtools, filtered_bam):
         if not dry_run and filtered_bam.exists():
             filtered_bam.unlink()
         filtered_index = Path(f"{filtered_bam}.bai")
         if not dry_run and filtered_index.exists():
             filtered_index.unlink()
-        if not bam_is_valid(samtools, sorted_bam):
+        if not bam_is_usable(samtools, sorted_bam):
             if not dry_run:
                 remove_tree(sample_dir)
                 sample_dir.mkdir(parents=True, exist_ok=True)
-            if not dry_run and temporary_dir.exists():
-                remove_tree(temporary_dir)
-            try:
-                run(
-                    [
-                        star, "--runThreadN", str(threads), "--genomeDir", str(index),
-                        "--readFilesIn", str(row["r1"]), str(row["r2"]), "--readFilesCommand", "gunzip -c",
-                        "--twopassMode", "Basic", "--outSAMtype", "BAM", "SortedByCoordinate",
-                        "--outSAMattributes", "NH", "HI", "AS", "nM", "XS",
-                        "--outSAMattrRGline", f"ID:{sample}", f"SM:{sample}", "PL:ILLUMINA",
-                        "--outFileNamePrefix", f"{sample_dir}/", "--outTmpDir", str(temporary_dir),
-                    ],
-                    dry_run,
-                )
-            finally:
-                if not dry_run and temporary_dir.exists():
-                    remove_tree(temporary_dir)
-            if not dry_run and not bam_is_valid(samtools, sorted_bam):
-                raise RuntimeError(f"STAR did not create a valid coordinate-sorted BAM for {sample}")
+            hisat2_command = [hisat2, "-p", str(threads), "--dta", "-x", str(index_prefix), "-1", str(row["r1"]), "-2", str(row["r2"]), "--summary-file", str(sample_dir / "HISAT2_summary.txt")]
+            sort_command = [samtools, "sort", "-@", str(threads), "-o", str(sorted_bam), "-"]
+            print("[RUN]", " ".join(hisat2_command), "|", " ".join(sort_command), flush=True)
+            if not dry_run:
+                environment = os.environ.copy()
+                environment["PATH"] = f"{Path(sys.prefix) / 'bin'}:{environment.get('PATH', '')}"
+                alignment = subprocess.Popen(hisat2_command, stdout=subprocess.PIPE, env=environment)
+                assert alignment.stdout is not None
+                sorting = subprocess.run(sort_command, stdin=alignment.stdout, check=False)
+                alignment.stdout.close()
+                if alignment.wait() != 0 or sorting.returncode != 0:
+                    raise RuntimeError(f"HISAT2 alignment or samtools sorting failed for {sample}")
+            if not dry_run and not bam_is_usable(samtools, sorted_bam):
+                raise RuntimeError(f"HISAT2 did not create a usable coordinate-sorted BAM for {sample}")
         run([samtools, "view", "-@", str(threads), "-b", "-q", "30", "-f", "2", "-F", "2304", "-o", str(filtered_bam), str(sorted_bam)], dry_run)
         run([samtools, "index", "-@", str(threads), str(filtered_bam)], dry_run)
-        if not dry_run and not bam_is_valid(samtools, filtered_bam):
-            raise RuntimeError(f"samtools did not create a valid filtered BAM for {sample}")
+        if not dry_run and not bam_is_usable(samtools, filtered_bam):
+            raise RuntimeError(f"samtools did not create a usable filtered BAM for {sample}")
         if not dry_run and sorted_bam.is_file():
             sorted_bam.unlink()
     if not track.is_file():
@@ -191,14 +176,20 @@ def mean_track(bigwig_compare: str, tracks: list[Path], output: Path, threads: i
 def generate_igv_tracks(threads: int, dry_run: bool) -> None:
     output = RNA_ROOT / "igv_tracks"
     samples = selected_samples()
-    index = star_index(executable("STAR"), samples, output, threads, dry_run)
+    index = hisat2_index(
+        executable("hisat2-build"),
+        executable("hisat2_extract_splice_sites.py"),
+        executable("hisat2_extract_exons.py"),
+        output,
+        threads,
+        dry_run,
+    )
     samtools = executable("samtools")
     bam_coverage = executable("bamCoverage")
-    temporary_root = star_temporary_root()
     tracks: dict[str, Path] = {}
     records: list[dict[str, str]] = []
     for _, row in samples.iterrows():
-        bam, track = align_sample(executable("STAR"), samtools, bam_coverage, index, row, output, temporary_root, threads, dry_run)
+        bam, track = align_sample(executable("hisat2"), samtools, bam_coverage, index, row, output, threads, dry_run)
         sample = str(row["sample_id"])
         tracks[sample] = track
         records.append({"sample_id": sample, "group": next(group for group, predicate in TRACK_GROUPS.items() if predicate(row)), "experiment": str(row["experiment"]), "condition": str(row["condition"]), "target": str(row["target"]), "shRNA": str(row["shRNA"]), "bam": str(bam), "bigwig": str(track), "normalization": "CPM; 10-bp bins; primary properly paired MAPQ>=30 alignments"})
