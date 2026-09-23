@@ -9,6 +9,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -49,6 +50,27 @@ def run(command: list[str], dry_run: bool = False) -> None:
         subprocess.run(command, check=True)
 
 
+def remove_tree(path: Path) -> None:
+    shutil.rmtree(path, ignore_errors=True)
+
+
+def star_temporary_root() -> Path:
+    root = Path(os.environ.get("MCM3_STAR_TMPDIR", tempfile.gettempdir())) / "mcm3_rnaseq_star"
+    root.mkdir(parents=True, exist_ok=True)
+    probe = root / f".fifo_probe_{os.getpid()}"
+    try:
+        os.mkfifo(probe)
+    except OSError as error:
+        raise RuntimeError(
+            f"STAR temporary directory does not support FIFO files: {root}. "
+            "Set MCM3_STAR_TMPDIR to a FIFO-capable local filesystem."
+        ) from error
+    finally:
+        if probe.exists() or probe.is_fifo():
+            probe.unlink()
+    return root
+
+
 def selected_samples() -> pd.DataFrame:
     samples = pd.read_csv(RNA_ROOT / "metadata" / "Samples.tsv", sep="\t")
     samples = samples.loc[samples["selected"].astype(str).str.lower().eq("true")].copy()
@@ -64,7 +86,7 @@ def read_length(fastq: Path) -> int:
 
 
 def star_index(star: str, samples: pd.DataFrame, output: Path, threads: int, dry_run: bool) -> Path:
-    index = output / "reference" / "STAR_GRCm38_GENCODE_M25"
+    index = output / "reference" / "STAR_GRCm38_GENCODE_M25_SAsparse3"
     if (index / "Genome").is_file():
         return index
     fasta = REFERENCE_DIR / MM10_FASTA_NAME
@@ -78,32 +100,31 @@ def star_index(star: str, samples: pd.DataFrame, output: Path, threads: int, dry
             "--genomeDir", str(index), "--genomeFastaFiles", str(fasta),
             "--sjdbGTFfile", str(gtf), "--sjdbOverhang",
             str(max(read_length(Path(path)) for path in samples["r1"]) - 1),
-            "--genomeSAindexNbases", "13",
+            "--genomeSAindexNbases", "13", "--genomeSAsparseD", "3",
         ],
         dry_run,
     )
     return index
 
 
-def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: pd.Series, output: Path, threads: int, dry_run: bool) -> tuple[Path, Path]:
+def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: pd.Series, output: Path, temporary_root: Path, threads: int, dry_run: bool) -> tuple[Path, Path]:
     sample = str(row["sample_id"])
     sample_dir = output / "alignments" / sample
     sample_dir.mkdir(parents=True, exist_ok=True)
-    temporary_dir = output / ".tmp" / sample
+    temporary_dir = temporary_root / sample
     sorted_bam = sample_dir / "Aligned.sortedByCoord.out.bam"
     filtered_bam = sample_dir / f"{sample}.primary.proper.MAPQ30.bam"
     track = output / "individual" / f"{sample}.bw"
     track.parent.mkdir(parents=True, exist_ok=True)
     if not filtered_bam.is_file():
         if not sorted_bam.is_file():
-            temporary_dir.parent.mkdir(parents=True, exist_ok=True)
             if not dry_run and temporary_dir.exists():
-                shutil.rmtree(temporary_dir)
+                remove_tree(temporary_dir)
             try:
                 run(
                     [
                         star, "--runThreadN", str(threads), "--genomeDir", str(index),
-                        "--readFilesIn", str(row["r1"]), str(row["r2"]), "--readFilesCommand", "zcat",
+                        "--readFilesIn", str(row["r1"]), str(row["r2"]), "--readFilesCommand", "gunzip -c",
                         "--twopassMode", "Basic", "--outSAMtype", "BAM", "SortedByCoordinate",
                         "--outSAMattributes", "NH", "HI", "AS", "nM", "XS",
                         "--outSAMattrRGline", f"ID:{sample}", f"SM:{sample}", "PL:ILLUMINA",
@@ -113,7 +134,7 @@ def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: 
                 )
             finally:
                 if not dry_run and temporary_dir.exists():
-                    shutil.rmtree(temporary_dir)
+                    remove_tree(temporary_dir)
         run([samtools, "view", "-@", str(threads), "-b", "-q", "30", "-f", "2", "-F", "2304", "-o", str(filtered_bam), str(sorted_bam)], dry_run)
         run([samtools, "index", "-@", str(threads), str(filtered_bam)], dry_run)
         if not dry_run and sorted_bam.is_file():
@@ -150,10 +171,11 @@ def generate_igv_tracks(threads: int, dry_run: bool) -> None:
     index = star_index(executable("STAR"), samples, output, threads, dry_run)
     samtools = executable("samtools")
     bam_coverage = executable("bamCoverage")
+    temporary_root = star_temporary_root()
     tracks: dict[str, Path] = {}
     records: list[dict[str, str]] = []
     for _, row in samples.iterrows():
-        bam, track = align_sample(executable("STAR"), samtools, bam_coverage, index, row, output, threads, dry_run)
+        bam, track = align_sample(executable("STAR"), samtools, bam_coverage, index, row, output, temporary_root, threads, dry_run)
         sample = str(row["sample_id"])
         tracks[sample] = track
         records.append({"sample_id": sample, "group": next(group for group, predicate in TRACK_GROUPS.items() if predicate(row)), "experiment": str(row["experiment"]), "condition": str(row["condition"]), "target": str(row["target"]), "shRNA": str(row["shRNA"]), "bam": str(bam), "bigwig": str(track), "normalization": "CPM; 10-bp bins; primary properly paired MAPQ>=30 alignments"})
