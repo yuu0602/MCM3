@@ -54,6 +54,17 @@ def remove_tree(path: Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
 
 
+def bam_is_valid(samtools: str, bam: Path) -> bool:
+    if not bam.is_file() or bam.stat().st_size == 0:
+        return False
+    return subprocess.run(
+        [samtools, "quickcheck", "-q", str(bam)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    ).returncode == 0
+
+
 def star_temporary_root() -> Path:
     root = Path(os.environ.get("MCM3_STAR_TMPDIR", tempfile.gettempdir())) / "mcm3_rnaseq_star"
     root.mkdir(parents=True, exist_ok=True)
@@ -116,8 +127,16 @@ def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: 
     filtered_bam = sample_dir / f"{sample}.primary.proper.MAPQ30.bam"
     track = output / "individual" / f"{sample}.bw"
     track.parent.mkdir(parents=True, exist_ok=True)
-    if not filtered_bam.is_file():
-        if not sorted_bam.is_file():
+    if not bam_is_valid(samtools, filtered_bam):
+        if not dry_run and filtered_bam.exists():
+            filtered_bam.unlink()
+        filtered_index = Path(f"{filtered_bam}.bai")
+        if not dry_run and filtered_index.exists():
+            filtered_index.unlink()
+        if not bam_is_valid(samtools, sorted_bam):
+            if not dry_run:
+                remove_tree(sample_dir)
+                sample_dir.mkdir(parents=True, exist_ok=True)
             if not dry_run and temporary_dir.exists():
                 remove_tree(temporary_dir)
             try:
@@ -135,8 +154,12 @@ def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: 
             finally:
                 if not dry_run and temporary_dir.exists():
                     remove_tree(temporary_dir)
+            if not dry_run and not bam_is_valid(samtools, sorted_bam):
+                raise RuntimeError(f"STAR did not create a valid coordinate-sorted BAM for {sample}")
         run([samtools, "view", "-@", str(threads), "-b", "-q", "30", "-f", "2", "-F", "2304", "-o", str(filtered_bam), str(sorted_bam)], dry_run)
         run([samtools, "index", "-@", str(threads), str(filtered_bam)], dry_run)
+        if not dry_run and not bam_is_valid(samtools, filtered_bam):
+            raise RuntimeError(f"samtools did not create a valid filtered BAM for {sample}")
         if not dry_run and sorted_bam.is_file():
             sorted_bam.unlink()
     if not track.is_file():
