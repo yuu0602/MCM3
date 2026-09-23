@@ -96,6 +96,7 @@ def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: 
     track.parent.mkdir(parents=True, exist_ok=True)
     if not filtered_bam.is_file():
         if not sorted_bam.is_file():
+            temporary_dir.parent.mkdir(parents=True, exist_ok=True)
             if not dry_run and temporary_dir.exists():
                 shutil.rmtree(temporary_dir)
             try:
