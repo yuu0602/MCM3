@@ -252,15 +252,21 @@ def transform_bigwigs(sources: list[Path], destination: Path, multiplier: float 
 
     readers = [pyBigWig.open(str(path)) for path in sources]
     try:
-        chroms = readers[0].chroms()
+        reader_chroms = [reader.chroms() for reader in readers]
+        chroms: dict[str, int] = {}
+        for header in reader_chroms:
+            for chrom, length in header.items():
+                known = chroms.setdefault(chrom, int(length))
+                if known != int(length):
+                    raise RuntimeError(f"Inconsistent chromosome length for {chrom}")
         destination.parent.mkdir(parents=True, exist_ok=True)
         with pyBigWig.open(str(destination), "w") as writer:
             writer.addHeader(list(chroms.items()), maxZooms=10)
             for chrom, length in chroms.items():
                 boundaries = {0, int(length)}
                 rows_by_reader = []
-                for reader in readers:
-                    rows = reader.intervals(chrom) or []
+                for reader, header in zip(readers, reader_chroms):
+                    rows = reader.intervals(chrom, 0, int(length)) if chrom in header else []
                     rows_by_reader.append(rows)
                     for start, end, _ in rows:
                         boundaries.update((int(start), int(end)))
