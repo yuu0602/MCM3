@@ -89,23 +89,30 @@ def align_sample(star: str, samtools: str, bam_coverage: str, index: Path, row: 
     sample = str(row["sample_id"])
     sample_dir = output / "alignments" / sample
     sample_dir.mkdir(parents=True, exist_ok=True)
+    temporary_dir = output / ".tmp" / sample
     sorted_bam = sample_dir / "Aligned.sortedByCoord.out.bam"
     filtered_bam = sample_dir / f"{sample}.primary.proper.MAPQ30.bam"
     track = output / "individual" / f"{sample}.bw"
     track.parent.mkdir(parents=True, exist_ok=True)
     if not filtered_bam.is_file():
         if not sorted_bam.is_file():
-            run(
-                [
-                    star, "--runThreadN", str(threads), "--genomeDir", str(index),
-                    "--readFilesIn", str(row["r1"]), str(row["r2"]), "--readFilesCommand", "zcat",
-                    "--twopassMode", "Basic", "--outSAMtype", "BAM", "SortedByCoordinate",
-                    "--outSAMattributes", "NH", "HI", "AS", "nM", "XS",
-                    "--outSAMattrRGline", f"ID:{sample}", f"SM:{sample}", "PL:ILLUMINA",
-                    "--outFileNamePrefix", f"{sample_dir}/",
-                ],
-                dry_run,
-            )
+            if not dry_run and temporary_dir.exists():
+                shutil.rmtree(temporary_dir)
+            try:
+                run(
+                    [
+                        star, "--runThreadN", str(threads), "--genomeDir", str(index),
+                        "--readFilesIn", str(row["r1"]), str(row["r2"]), "--readFilesCommand", "zcat",
+                        "--twopassMode", "Basic", "--outSAMtype", "BAM", "SortedByCoordinate",
+                        "--outSAMattributes", "NH", "HI", "AS", "nM", "XS",
+                        "--outSAMattrRGline", f"ID:{sample}", f"SM:{sample}", "PL:ILLUMINA",
+                        "--outFileNamePrefix", f"{sample_dir}/", "--outTmpDir", str(temporary_dir),
+                    ],
+                    dry_run,
+                )
+            finally:
+                if not dry_run and temporary_dir.exists():
+                    shutil.rmtree(temporary_dir)
         run([samtools, "view", "-@", str(threads), "-b", "-q", "30", "-f", "2", "-F", "2304", "-o", str(filtered_bam), str(sorted_bam)], dry_run)
         run([samtools, "index", "-@", str(threads), str(filtered_bam)], dry_run)
         if not dry_run and sorted_bam.is_file():
