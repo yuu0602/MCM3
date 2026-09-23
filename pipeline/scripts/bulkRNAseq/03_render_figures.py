@@ -8,7 +8,6 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -96,14 +95,9 @@ def hisat2_index(hisat2_build: str, splice_sites: str, exons: str, output: Path,
     gtf = REFERENCE_DIR / "gencode.vM25.annotation.gtf"
     if not fasta.is_file() or not gtf.is_file():
         raise FileNotFoundError("Missing mm10 FASTA or GENCODE M25 GTF in pipeline/reference")
-    temporary_parent = Path(os.environ.get("MCM3_HISAT2_INDEX_TMPDIR", tempfile.gettempdir()))
-    build_index = temporary_parent / "mcm3_hisat2_index"
-    build_prefix = build_index / "mm10_gencodeM25"
-    if not dry_run:
-        remove_tree(build_index)
-        build_index.mkdir(parents=True, exist_ok=True)
-    splice_file = build_index / "splice_sites.txt"
-    exon_file = build_index / "exons.txt"
+    index.mkdir(parents=True, exist_ok=True)
+    splice_file = index / "splice_sites.txt"
+    exon_file = index / "exons.txt"
     for command, destination in (([splice_sites, str(gtf)], splice_file), ([exons, str(gtf)], exon_file)):
         print("[RUN]", " ".join(command), ">", destination, flush=True)
         if not dry_run:
@@ -111,17 +105,7 @@ def hisat2_index(hisat2_build: str, splice_sites: str, exons: str, output: Path,
                 environment = os.environ.copy()
                 environment["PATH"] = f"{Path(sys.prefix) / 'bin'}:{environment.get('PATH', '')}"
                 subprocess.run(command, stdout=handle, check=True, env=environment)
-    run([hisat2_build, "-p", str(threads), "--ss", str(splice_file), "--exon", str(exon_file), str(fasta), str(build_prefix)], dry_run)
-    if dry_run:
-        return prefix
-    built_files = [Path(f"{build_prefix}.{number}.ht2") for number in range(1, 9)]
-    if not all(path.is_file() and path.stat().st_size > 0 for path in built_files):
-        raise RuntimeError("HISAT2 did not create a complete eight-file index")
-    remove_tree(index)
-    index.mkdir(parents=True, exist_ok=True)
-    for source in [*built_files, splice_file, exon_file]:
-        shutil.copy2(source, index / source.name)
-    remove_tree(build_index)
+    run([hisat2_build, "-p", str(threads), "--ss", str(splice_file), "--exon", str(exon_file), str(fasta), str(prefix)], dry_run)
     return prefix
 
 
