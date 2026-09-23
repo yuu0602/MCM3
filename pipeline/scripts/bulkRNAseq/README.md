@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | 01 | `01_prepare_inputs.py` | Prepare references, sample manifests, and local inputs. |
 | 02 | `02_quantify_and_test.py` | Quantify transcripts and run differential-expression analysis. Calls Stage 03. |
-| 03 | `03_render_figures.py` | Render all bulk RNA-seq figures from newly generated DEG outputs. |
+| 03 | `03_render_figures.py` | Render bulk RNA-seq figures and, with `--igv-tracks`, generate IGV tracks. |
 
 ## Analysis conditions
 
@@ -36,3 +36,13 @@ diagram.
 
 Run Stage 03 with `--publication-figures` to render text-free versions of every
 panel in `deg_work/visuals/publication_figures`.
+
+## IGV tracks
+
+The optional `--igv-tracks` mode of Stage 03 is separate from DEG testing and uses the exact libraries selected in
+`metadata/Samples.tsv`. It creates primary, properly paired, MAPQ >=30 STAR
+alignments and 10-bp CPM-normalized bigWigs. Equal-weight group means are saved
+in `deg_work/igv_tracks/means` as `NT_mean.bw`, `shMCM3_mean.bw`,
+`shNONO_mean.bw`, and `shPSPC1_mean.bw`. `NT_mean.bw` is an equal-weight visual
+summary of all selected control libraries from the MCM3 and NONO/PSPC1 batches;
+the manifest records that cross-batch composition.

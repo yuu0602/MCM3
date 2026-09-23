@@ -6,6 +6,7 @@ dependencies:
   - python=3.11
   - r-base=4.4
   - salmon=1.10.3
+  - star=2.7.11b
   - bowtie2=2.5.4
   - samtools=1.21
   - picard=3.4.0
