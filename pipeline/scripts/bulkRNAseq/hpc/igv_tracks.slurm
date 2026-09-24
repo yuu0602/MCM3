@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=mcm3-rnaseq-igv
-#SBATCH --partition=tiny
+#SBATCH --partition=batch
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=180G
 #SBATCH --time=2-12:00:00
@@ -16,7 +16,6 @@ NODE_ROOT="${SLURM_TMPDIR:-/tmp/${USER}/mcm3_rnaseq_igv_${SLURM_JOB_ID}}"
 NODE_PROJECT="${NODE_ROOT}/MCM3_project_analysis_pipeline"
 
 mkdir -p "${NODE_ROOT}"
-mkdir -p "${NODE_PROJECT}"
 trap 'rm -rf "${NODE_ROOT}"' EXIT
 
 echo "[$(date)] Staging RNA-seq pipeline and selected FASTQs to ${NODE_ROOT}"
@@ -26,10 +25,7 @@ rsync -a "${PROJECT_ROOT}/bulkRNAseq_data/" "${NODE_PROJECT}/bulkRNAseq_data/"
 gzip -dc "${NODE_PROJECT}/pipeline/reference/GRCm38.primary_assembly.gencodeM25_contigs.fa.gz" > "${NODE_PROJECT}/pipeline/reference/GRCm38.primary_assembly.gencodeM25_contigs.fa"
 gzip -dc "${NODE_PROJECT}/pipeline/reference/gencode.vM25.annotation.gtf.gz" > "${NODE_PROJECT}/pipeline/reference/gencode.vM25.annotation.gtf"
 
-find "${NODE_PROJECT}/pipeline/deg_work/metadata" -type f -name '*.tsv' -exec \
-  sed -i \
-    -e "s|/Volumes/Crucial_X10/MCM3-project-analysis-pipeline|${NODE_PROJECT}|g" \
-    -e "s|${PROJECT_ROOT}|${NODE_PROJECT}|g" {} +
+sed -i "s|${PROJECT_ROOT}|${NODE_PROJECT}|g" "${NODE_PROJECT}/pipeline/deg_work/metadata/Samples.tsv"
 
 export MCM3_HISAT2_INDEX_TMPDIR="${NODE_ROOT}/hisat2_index"
 export MPLCONFIGDIR="${NODE_ROOT}/matplotlib"
