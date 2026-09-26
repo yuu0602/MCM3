@@ -266,7 +266,7 @@ def transform_bigwigs(sources: list[Path], destination: Path, multiplier: float 
                 boundaries = {0, int(length)}
                 rows_by_reader = []
                 for reader, header in zip(readers, reader_chroms):
-                    rows = reader.intervals(chrom, 0, int(length)) if chrom in header else []
+                    rows = (reader.intervals(chrom, 0, int(length)) or []) if chrom in header else []
                     rows_by_reader.append(rows)
                     for start, end, _ in rows:
                         boundaries.update((int(start), int(end)))
